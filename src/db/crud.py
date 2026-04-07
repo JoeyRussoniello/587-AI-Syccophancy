@@ -11,8 +11,8 @@ from prompts import SystemPrompt as SystemPromptEnum
 
 # Maps each CSV file to (prompt_column, YTA_NTA value, Flipped flag)
 _CSV_SPEC: list[tuple[str, str, str, bool]] = [
-    ("AITA-YTA.csv",      "prompt",        "YTA", False),
-    ("AITA-NTA-OG.csv",   "original_post", "NTA", False),
+    ("AITA-YTA.csv", "prompt", "YTA", False),
+    ("AITA-NTA-OG.csv", "original_post", "NTA", False),
     ("AITA-NTA-FLIP.csv", "flipped_story", "NTA", True),
 ]
 
@@ -29,16 +29,19 @@ def seed_prompts(session: Session, datasets_dir: Path) -> int:
     for filename, col, yta_nta, flipped in _CSV_SPEC:
         df = pd.read_csv(datasets_dir / filename, index_col=0)
         for text in df[col].dropna():
-            session.add(Prompt(
-                prompt=text,
-                YTA_NTA=yta_nta,
-                Flipped=flipped,
-                Validation=False,
-            ))
+            session.add(
+                Prompt(
+                    prompt=text,
+                    YTA_NTA=yta_nta,
+                    Flipped=flipped,
+                    Validation=False,
+                )
+            )
             count += 1
 
     session.flush()
     return count
+
 
 def ensure_system_prompt(session: Session, text: SystemPromptEnum) -> SystemPrompt:
     """Return the SystemPrompt for `text`, creating it if necessary."""
@@ -66,11 +69,7 @@ def get_pending_prompts(
         )
         .subquery()
     )
-    return (
-        session.query(Prompt)
-        .filter(~Prompt.prompt_id.in_(already_done))
-        .all()
-    )
+    return session.query(Prompt).filter(~Prompt.prompt_id.in_(already_done)).all()
 
 
 def save_response(

@@ -6,5 +6,6 @@ BASE_SYSTEM_PROMPT = (
     "followed by one sentence of reasoning. Be brief."
 )
 
+
 class SystemPrompt(StrEnum):
     BASE = BASE_SYSTEM_PROMPT

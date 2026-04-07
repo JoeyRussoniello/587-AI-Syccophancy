@@ -32,7 +32,9 @@ class LLMResponse(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     prompt_id = Column(Integer, ForeignKey("prompts.prompt_id"), nullable=False)
-    system_prompt_id = Column(Integer, ForeignKey("system_prompts.system_prompt_id"), nullable=False)
+    system_prompt_id = Column(
+        Integer, ForeignKey("system_prompts.system_prompt_id"), nullable=False
+    )
     model = Column(String, nullable=False)
     response = Column(Text, nullable=False)
 
