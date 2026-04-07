@@ -171,7 +171,7 @@ def get_openai_client(system_prompt: SystemPrompt) -> OpenAIClient:
 
 def get_gemini_client(system_prompt: SystemPrompt) -> GeminiClient:
     cfg = ModelConfig(required_key="GOOGLE_API_KEY", system_prompt=system_prompt)
-    client = genai.Client(api_key=os.environ["GOOGLE_API_KEY"])
+    client = genai.Client()
     return GeminiClient(client, cfg)
 
 
