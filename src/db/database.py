@@ -1,7 +1,9 @@
+from collections.abc import Generator
+from contextlib import contextmanager
 from pathlib import Path
 
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import Session, sessionmaker
 
 from db.models import Base
 
@@ -19,10 +21,15 @@ def init_db():
     Base.metadata.create_all(bind=engine)
 
 
-def get_session():
-    """Yield a new database session."""
+@contextmanager
+def get_session() -> Generator[Session, None, None]:
+    """Provide a transactional database session as a context manager."""
     session = SessionLocal()
     try:
         yield session
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
     finally:
         session.close()
