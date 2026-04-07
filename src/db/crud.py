@@ -1,0 +1,92 @@
+"""CRUD helpers for the sycophancy database."""
+
+from pathlib import Path
+
+import pandas as pd
+from sqlalchemy.orm import Session
+
+from db.models import LLMResponse, Prompt, SystemPrompt
+from models import ModelProvider
+from prompts import SystemPrompt as SystemPromptEnum
+
+# Maps each CSV file to (prompt_column, YTA_NTA value, Flipped flag)
+_CSV_SPEC: list[tuple[str, str, str, bool]] = [
+    ("AITA-YTA.csv",      "prompt",        "YTA", False),
+    ("AITA-NTA-OG.csv",   "original_post", "NTA", False),
+    ("AITA-NTA-FLIP.csv", "flipped_story", "NTA", True),
+]
+
+
+def seed_prompts(session: Session, datasets_dir: Path) -> int:
+    """Load prompts from CSVs into the prompts table (skips if already seeded).
+
+    Returns the number of new rows inserted.
+    """
+    if session.query(Prompt).first() is not None:
+        return 0
+
+    count = 0
+    for filename, col, yta_nta, flipped in _CSV_SPEC:
+        df = pd.read_csv(datasets_dir / filename, index_col=0)
+        for text in df[col].dropna():
+            session.add(Prompt(
+                prompt=text,
+                YTA_NTA=yta_nta,
+                Flipped=flipped,
+                Validation=False,
+            ))
+            count += 1
+
+    session.flush()
+    return count
+
+def ensure_system_prompt(session: Session, text: SystemPromptEnum) -> SystemPrompt:
+    """Return the SystemPrompt for `text`, creating it if necessary."""
+    row = session.query(SystemPrompt).filter_by(system_prompt=text).first()
+    if row is not None:
+        return row
+
+    row = SystemPrompt(system_prompt=text)
+    session.add(row)
+    session.flush()
+    return row
+
+
+def get_pending_prompts(
+    session: Session,
+    model: ModelProvider,
+    system_prompt: SystemPrompt,
+) -> list[Prompt]:
+    """Return prompts that do NOT yet have a response for this model + system prompt."""
+    already_done = (
+        session.query(LLMResponse.prompt_id)
+        .filter(
+            LLMResponse.model == model,
+            LLMResponse.system_prompt_id == system_prompt.system_prompt_id,
+        )
+        .subquery()
+    )
+    return (
+        session.query(Prompt)
+        .filter(~Prompt.prompt_id.in_(already_done))
+        .all()
+    )
+
+
+def save_response(
+    session: Session,
+    prompt: Prompt,
+    system_prompt: SystemPrompt,
+    model: ModelProvider,
+    response_text: str,
+) -> LLMResponse:
+    """Insert a single LLM response row and flush it to the database."""
+    row = LLMResponse(
+        prompt_id=prompt.prompt_id,
+        system_prompt_id=system_prompt.system_prompt_id,
+        model=model,
+        response=response_text,
+    )
+    session.add(row)
+    session.flush()
+    return row
