@@ -9,6 +9,7 @@ from enum import StrEnum
 from typing import Protocol
 
 import anthropic
+import google.generativeai as genai
 import openai
 from anthropic import AsyncAnthropic
 from dotenv import load_dotenv
@@ -17,11 +18,11 @@ from google.api_core.exceptions import (
     ResourceExhausted,
     ServiceUnavailable,
 )
-from google.generativeai import GenerativeModel
 from openai import AsyncOpenAI
 
 from prompts import SystemPrompt
 
+load_dotenv()
 logger = logging.getLogger(__name__)
 
 class ModelProvider(StrEnum):
@@ -40,6 +41,13 @@ class ModelConfig:
     max_retries: int = 5
     retry_base_delay: float = 2.0
 
+    def ensure_key(self) -> None:
+        key = self.required_key
+        if os.getenv(key) is None:
+            raise EnvironmentError(f"Missing Required Key to initialize client {key}")
+    
+    def __post_init__(self):
+        self.ensure_key()
 
 class LLM_Client(Protocol):
     """Protocol for LLM clients. Subclasses implement only _call_model_once.
@@ -71,10 +79,6 @@ class LLM_Client(Protocol):
         async with semaphore:
             return await self._call_model(prompt)
     
-    def ensure_key(self) -> None:
-        key = self.cfg.required_key
-        if os.getenv(key) is None:
-            raise EnvironmentError(f'Missing Required Key to initial client {key}')
 
 
 class AnthropicClient(LLM_Client):
@@ -131,7 +135,7 @@ class OpenAIClient(LLM_Client):
             return "ERROR"
 
 class GeminiClient(LLM_Client):
-    def __init__(self, client: GenerativeModel, configuration: ModelConfig):
+    def __init__(self, client: genai.GenerativeModel, configuration: ModelConfig):
         self.client = client
         self.cfg = configuration
 
@@ -151,18 +155,19 @@ class GeminiClient(LLM_Client):
 
 
 def get_anthropic_client(system_prompt: SystemPrompt) -> AnthropicClient:
-    cfg= ModelConfig(system_prompt)
+    cfg= ModelConfig(required_key="ANTHROPIC_API_KEY", system_prompt=system_prompt)
     return AnthropicClient(AsyncAnthropic(), cfg)
 
 
 def get_openai_client(system_prompt: SystemPrompt) -> OpenAIClient:
-    cfg = ModelConfig(system_prompt)
+    cfg = ModelConfig(required_key="OPENAI_API_KEY", system_prompt=system_prompt)
     return OpenAIClient(AsyncOpenAI(), cfg)
 
 
 def get_gemini_client(system_prompt: SystemPrompt) -> GeminiClient:
-    cfg = ModelConfig(system_prompt)
-    return GeminiClient(GenerativeModel(ModelProvider.GEMINI), cfg)
+    genai.configure(api_key=os.environ["GOOGLE_API_KEY"])
+    cfg = ModelConfig(required_key="GOOGLE_API_KEY", system_prompt=system_prompt)
+    return GeminiClient(genai.GenerativeModel(ModelProvider.GEMINI), cfg)
 
 CLIENT_FUNCTIONS = {
     ModelProvider.CLAUDE: get_anthropic_client,
