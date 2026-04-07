@@ -9,15 +9,12 @@ from enum import StrEnum
 from typing import Protocol
 
 import anthropic
-import google.generativeai as genai
 import openai
 from anthropic import AsyncAnthropic
 from dotenv import load_dotenv
-from google.api_core.exceptions import (
-    DeadlineExceeded,
-    ResourceExhausted,
-    ServiceUnavailable,
-)
+from google import genai
+from google.genai import errors as genai_errors
+from google.genai import types as genai_types
 from openai import AsyncOpenAI
 
 from prompts import SystemPrompt
@@ -135,19 +132,26 @@ class OpenAIClient(LLM_Client):
             return "ERROR"
 
 class GeminiClient(LLM_Client):
-    def __init__(self, client: genai.GenerativeModel, configuration: ModelConfig):
+    def __init__(self, client: genai.Client, configuration: ModelConfig):
         self.client = client
         self.cfg = configuration
 
     async def _call_model_once(self, prompt: str) -> str | None:
         try:
-            resp = await self.client.generate_content_async(
-                f"{self.cfg.system_prompt}\n\n{prompt}",
-                generation_config={"max_output_tokens": self.cfg.max_tokens},
+            resp = await self.client.aio.models.generate_content(
+                model=ModelProvider.GEMINI,
+                contents=prompt,
+                config=genai_types.GenerateContentConfig(
+                    system_instruction=self.cfg.system_prompt,
+                    max_output_tokens=self.cfg.max_tokens,
+                ),
             )
             return resp.text.strip()
-        except (ResourceExhausted, ServiceUnavailable, DeadlineExceeded):
-            return None
+        except genai_errors.APIError as e:
+            if e.code in (429, 503):
+                return None
+            logger.error(f"Gemini API error {e.code}: {e}")
+            return "ERROR"
         except Exception as e:
             logger.error(f"Gemini error: {e}")
             return "ERROR"
@@ -165,9 +169,9 @@ def get_openai_client(system_prompt: SystemPrompt) -> OpenAIClient:
 
 
 def get_gemini_client(system_prompt: SystemPrompt) -> GeminiClient:
-    genai.configure(api_key=os.environ["GOOGLE_API_KEY"])
     cfg = ModelConfig(required_key="GOOGLE_API_KEY", system_prompt=system_prompt)
-    return GeminiClient(genai.GenerativeModel(ModelProvider.GEMINI), cfg)
+    client = genai.Client(api_key=os.environ["GOOGLE_API_KEY"])
+    return GeminiClient(client, cfg)
 
 CLIENT_FUNCTIONS = {
     ModelProvider.CLAUDE: get_anthropic_client,
