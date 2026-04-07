@@ -16,6 +16,7 @@ API keys are loaded from the .env file at the repo root:
     ANTHROPIC_API_KEY, OPENAI_API_KEY, GOOGLE_API_KEY
 """
 import asyncio
+import logging
 from pathlib import Path
 
 from db.crud import (
@@ -31,6 +32,9 @@ from prompts import SystemPrompt
 # CONFIG - Change variables to change the running model 
 SYSTEM_PROMPT = SystemPrompt.BASE
 PROVIDER = ModelProvider.CLAUDE
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(format = '%(asctime)s - %(levelname)s - %(message)s')
 
 client_fn = CLIENT_FUNCTIONS[PROVIDER]
 llm = client_fn(SYSTEM_PROMPT)
