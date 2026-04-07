@@ -35,7 +35,7 @@ SYSTEM_PROMPT = SystemPrompt.BASE
 PROVIDER = ModelProvider.GEMINI
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s", level = logging.DEBUG)
+logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s", level = logging.INFO)
 client_fn = CLIENT_FUNCTIONS[PROVIDER]
 llm = client_fn(SYSTEM_PROMPT)
 REPO_ROOT = Path(__file__).parent
