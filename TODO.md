@@ -30,7 +30,7 @@
 - [ ] Examine Rates of false NTA (sycophantic) responses for each model - 4/15 Wed (Brian) 
 - [ ] Use SBERT to encode prompts (maybe cache in DB), analyze prompts for similarity - 4/20 Mon (Brian & Joey)
 - [ ] Use BertScore to compare LLM Reasoning to Crowdsourced Reasoning  - 4/20 Mon (Brian & Joey)
-- [ ] Qualitative Analysis. Do we see any similarity on when the AI fails to point out bad behavior. Pick examples - 4/22 (Wed)
+- [ ] Qualitative Analysis. Do we see any similarity on when the AI fails to point out bad behavior. Pick examples - 4/22 (Wed) (Brian & Joey)
 
 ## Additional Steps (If Time Allows):
 
