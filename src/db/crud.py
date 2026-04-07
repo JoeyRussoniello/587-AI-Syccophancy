@@ -67,7 +67,7 @@ def get_pending_prompts(
             LLMResponse.model == model,
             LLMResponse.system_prompt_id == system_prompt.system_prompt_id,
         )
-        .subquery()
+        .scalar_subquery()
     )
     return session.query(Prompt).filter(~Prompt.prompt_id.in_(already_done)).all()
 

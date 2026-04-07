@@ -1,13 +1,13 @@
 ## Code Quality (Chores)
 
 - [X] Write initial text generation scaffolding (Brian)
-- [ ] Refactor Generate Responses for dependency injection / modify in one place (Joey)
-  - [ ] Generate Prompt Protocol
-  - [ ] Overall function that uses this prtoocl
-- [ ] Migrate from CSV to SQLite Relational DB **Complete This Today** (Joey)
-  - [ ] LLM_Responses (id, prompt_id, system_prompt_id, model, response)
-  - [ ] SystemPrompts (system_prompt_id, system_prompt)
-  - [ ] Prompts (prompt_id, prompt, YTA_NTA, Flipped, Validation)
+- [X] Refactor Generate Responses for dependency injection / modify in one place (Joey)
+  - [X] Generate Prompt Protocol
+  - [X] Overall function that uses this prtoocl
+- [X] Migrate from CSV to SQLite Relational DB **Complete This Today** (Joey)
+  - [X] LLM_Responses (id, prompt_id, system_prompt_id, model, response)
+  - [X] SystemPrompts (system_prompt_id, system_prompt)
+  - [X] Prompts (prompt_id, prompt, YTA_NTA, Flipped, Validation)
 
 ## Gather LLM Data:
 

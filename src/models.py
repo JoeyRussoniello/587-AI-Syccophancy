@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 class ModelProvider(StrEnum):
     CLAUDE = "claude-haiku-4-5-20251001"
     OPEN_AI = "gpt-4o-mini"
-    GEMINI = "gemini-1.5-flash"
+    GEMINI = "gemini-2.0-flash"
 
 
 @dataclass
@@ -34,7 +34,7 @@ class ModelConfig:
     required_key: str
     system_prompt: SystemPrompt
     max_tokens: int = 150
-    max_rows: int | None = 15
+    max_rows: int | None = 1
     max_workers: int = 3
     max_retries: int = 5
     retry_base_delay: float = 2.0
@@ -65,6 +65,7 @@ class LLM_Client(Protocol):
     async def _call_model(self, prompt: str) -> str:
         delay = self.cfg.retry_base_delay
         for attempt in range(self.cfg.max_retries):
+            logging.debug('Attempt %d to _call_model_once.', attempt + 1)
             result = await self._call_model_once(prompt)
             if result is not None:
                 return result
@@ -141,9 +142,9 @@ class GeminiClient(LLM_Client):
         try:
             resp = await self.client.aio.models.generate_content(
                 model=ModelProvider.GEMINI,
-                contents=prompt,
+                contents=str(prompt),
                 config=genai_types.GenerateContentConfig(
-                    system_instruction=self.cfg.system_prompt,
+                    system_instruction=str(self.cfg.system_prompt),
                     max_output_tokens=self.cfg.max_tokens,
                 ),
             )

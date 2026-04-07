@@ -26,16 +26,16 @@ from db.crud import (
     save_response,
     seed_prompts,
 )
-from db.database import get_session
+from db.database import get_session, init_db
 from models import CLIENT_FUNCTIONS, LLM_Client, ModelProvider
 from prompts import SystemPrompt
 
 # CONFIG - Change variables to change the running model
 SYSTEM_PROMPT = SystemPrompt.BASE
-PROVIDER = ModelProvider.CLAUDE
+PROVIDER = ModelProvider.GEMINI
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s", level = logging.DEBUG)
 client_fn = CLIENT_FUNCTIONS[PROVIDER]
 llm = client_fn(SYSTEM_PROMPT)
 REPO_ROOT = Path(__file__).parent
@@ -45,6 +45,8 @@ DATASETS_DIR = REPO_ROOT / "datasets"
 async def get_responses_for_model(
     llm: LLM_Client, system_prompt: SystemPrompt, semaphore: asyncio.Semaphore
 ):
+    num_calls = 0
+    max_calls = llm.cfg.max_rows
     with get_session() as session:
         seed_prompts(session, DATASETS_DIR)
         system_prompt_db_object = ensure_system_prompt(session, system_prompt)
@@ -52,7 +54,12 @@ async def get_responses_for_model(
         pending = get_pending_prompts(session, PROVIDER, system_prompt_db_object)
         for prompt in pending:
             response = await llm.call_model(prompt.prompt, semaphore)
-            save_response(session, prompt, system_prompt_db_object, PROVIDER, response)
+            num_calls += 1
+            if response != "ERROR":
+                save_response(session, prompt, system_prompt_db_object, PROVIDER, response)
+            
+            if max_calls is not None and num_calls >= max_calls:
+                return
 
 
 async def main():
@@ -61,4 +68,5 @@ async def main():
 
 
 if __name__ == "__main__":
+    init_db()
     asyncio.run(main())
