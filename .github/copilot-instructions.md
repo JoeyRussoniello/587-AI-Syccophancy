@@ -1,0 +1,4 @@
+- Prefer `uv` to `python` for all imports, package installs, and script runs
+  - Instead of `python main.py`, use `uv run main.py`
+  - Instead of `pip install -e` use `uv sync --all-groups`
+  - Instead of `python -m unittest`, use `uv run pytest`
