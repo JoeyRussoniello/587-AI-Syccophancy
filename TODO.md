@@ -27,10 +27,10 @@
 
 ## Exploratory Data Analytics 
 
-- Examine Rates of false NTA (sycophantic) responses for each model - 4/15 (Wed)
-- Use SBERT to encode prompts (maybe cache in DB), analyze prompts for similarity - 4/20 Mon
-- Use BertScore to compare LLM Reasoning to Crowdsourced Reasoning  - 4/20 Mon
-- Qualitative Analysis. Do we see any similarity on when the AI fails to point out bad behavior. Pick examples - 4/22 (Wed)
+- [ ] Examine Rates of false NTA (sycophantic) responses for each model - 4/15 Wed (Brian) 
+- [ ] Use SBERT to encode prompts (maybe cache in DB), analyze prompts for similarity - 4/20 Mon (Brian & Joey)
+- [ ] Use BertScore to compare LLM Reasoning to Crowdsourced Reasoning  - 4/20 Mon (Brian & Joey)
+- [ ] Qualitative Analysis. Do we see any similarity on when the AI fails to point out bad behavior. Pick examples - 4/22 (Wed)
 
 ## Additional Steps (If Time Allows):
 
@@ -39,16 +39,17 @@ Convert Converation to Multi-step (split by periods)
 ## Formalization Steps
 
 - Presentation (Mon April 27th)
-  - So what? Who cares (from annotated bibs)
-  - Our Methods 
-  - Results (graphs, numbers, etc)
-  - Discussion (impacts of system prompting, what this means for future research)
-  - Challenges 
-  - Conclusion
+  - [ ] So what? Who cares (from annotated bibs)
+  - [ ] So what? Who cares (from annotated bibs)
+  - [ ] Our Methods 
+  - [ ] Results (graphs, numbers, etc)
+  - [ ] Discussion (impacts of system prompting, what this means for future research)
+  - [ ] Challenges 
+  - [ ] Conclusion
 - Paper (Thursday April 30th)
-  - Introduction (Joey)
-  - Methodology (Joey)
-  - Results (Brian)
-  - Discussion (Brian)
-  - Limitations / Future Resarch (Brian)
-  - Conclusion (Joey)
+  - [ ] Introduction (Joey)
+  - [ ] Methodology (Joey)
+  - [ ] Results (Brian)
+  - [ ] Discussion (Brian)
+  - [ ] Limitations / Future Resarch (Brian)
+  - [ ] Conclusion (Joey)
