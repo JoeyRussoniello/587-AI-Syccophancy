@@ -1,0 +1,14 @@
+[project]
+name = "587-ai-syccophancy"
+version = "0.1.0"
+description = "Dependencies for DS 587 AI Sycophancy Project"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "anthropic>=0.89.0",
+    "google-generativeai>=0.8.6",
+    "openai>=2.30.0",
+    "pandas>=3.0.2",
+    "python-dotenv>=1.2.2",
+    "tqdm>=4.67.3",
+]
