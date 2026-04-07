@@ -1,55 +1,68 @@
+"""An entry point for all LLM wrappers. Abstracts method class, retry strategies, and async processing"""
+
 import asyncio
 import logging
+import os
 from asyncio import Semaphore
 from dataclasses import dataclass
+from enum import StrEnum
 from typing import Protocol
 
 import anthropic
 import openai
 from anthropic import AsyncAnthropic
-from google.api_core.exceptions import (
-    DeadlineExceeded,
-    ResourceExhausted,
-    ServiceUnavailable,
-)
-from google.generativeai import GenerativeModel
+from dotenv import load_dotenv
+from google import genai
+from google.genai import errors as genai_errors
+from google.genai import types as genai_types
 from openai import AsyncOpenAI
 
+from prompts import SystemPrompt
+
+load_dotenv()
 logger = logging.getLogger(__name__)
 
-MODELS = {
-    "claude": "claude-haiku-4-5-20251001",
-    "openai": "gpt-4o-mini",
-    "gemini": "gemini-1.5-flash",
-}
+
+class ModelProvider(StrEnum):
+    CLAUDE = "claude-haiku-4-5-20251001"
+    OPEN_AI = "gpt-4o-mini"
+    GEMINI = "gemini-1.5-flash"
+
 
 @dataclass
 class ModelConfig:
-    model: str
-    system_prompt: str 
+    required_key: str
+    system_prompt: SystemPrompt
     max_tokens: int = 150
-    max_rows: int | None  = 15
-    max_workers: int = 3 
+    max_rows: int | None = 15
+    max_workers: int = 3
     max_retries: int = 5
     retry_base_delay: float = 2.0
+
+    def ensure_key(self) -> None:
+        key = self.required_key
+        if os.getenv(key) is None:
+            raise EnvironmentError(f"Missing Required Key to initialize client {key}")
+
+    def __post_init__(self):
+        self.ensure_key()
 
 
 class LLM_Client(Protocol):
     """Protocol for LLM clients. Subclasses implement only _call_model_once.
-    
+
     _call_model_once returns:
         str: on success (response text) or non-retryable failure ("ERROR")
         None: signal that the call should be retried
     """
+
     cfg: ModelConfig
 
-    def __init__(self, client: any, configuration: ModelConfig): 
-        ...
-    
-    async def _call_model_once(self, prompt: str) -> str | None:
-        ...
-        
-    async def _call_model(self, prompt: str) -> str: 
+    def __init__(self, client: any, configuration: ModelConfig): ...
+
+    async def _call_model_once(self, prompt: str) -> str | None: ...
+
+    async def _call_model(self, prompt: str) -> str:
         delay = self.cfg.retry_base_delay
         for attempt in range(self.cfg.max_retries):
             result = await self._call_model_once(prompt)
@@ -59,7 +72,7 @@ class LLM_Client(Protocol):
                 await asyncio.sleep(delay)
                 delay *= 2
         return "ERROR"
-    
+
     async def call_model(self, prompt: str, semaphore: Semaphore) -> str:
         async with semaphore:
             return await self._call_model(prompt)
@@ -73,7 +86,7 @@ class AnthropicClient(LLM_Client):
     async def _call_model_once(self, prompt: str) -> str | None:
         try:
             msg = await self.client.messages.create(
-                model=self.cfg.model,
+                model=ModelProvider.CLAUDE,
                 max_tokens=self.cfg.max_tokens,
                 system=self.cfg.system_prompt,
                 messages=[{"role": "user", "content": prompt}],
@@ -95,16 +108,16 @@ class OpenAIClient(LLM_Client):
     def __init__(self, client: AsyncOpenAI, configuration: ModelConfig):
         self.client = client
         self.cfg = configuration
-    
+
     async def _call_model_once(self, prompt: str) -> str | None:
-        try: 
+        try:
             resp = await self.client.chat.completions.create(
-                model = self.cfg.model,
-                max_tokens = self.cfg.max_tokens,
-                messages = [
-                    {'role': 'system', 'content': self.cfg.system_prompt},
-                    {'role': 'user', 'content': prompt}
-                ]
+                model=ModelProvider.OPEN_AI,
+                max_tokens=self.cfg.max_tokens,
+                messages=[
+                    {"role": "system", "content": self.cfg.system_prompt},
+                    {"role": "user", "content": prompt},
+                ],
             )
             return resp.choices[0].message.content.strip()
         except openai.RateLimitError:
@@ -118,21 +131,51 @@ class OpenAIClient(LLM_Client):
             logger.error(f"Unexpected OpenAI error: {e}")
             return "ERROR"
 
+
 class GeminiClient(LLM_Client):
-    def __init__(self, client: GenerativeModel, configuration: ModelConfig):
+    def __init__(self, client: genai.Client, configuration: ModelConfig):
         self.client = client
         self.cfg = configuration
 
     async def _call_model_once(self, prompt: str) -> str | None:
         try:
-            resp = await self.client.generate_content_async(
-                f"{self.cfg.system_prompt}\n\n{prompt}",
-                generation_config={"max_output_tokens": self.cfg.max_tokens},
+            resp = await self.client.aio.models.generate_content(
+                model=ModelProvider.GEMINI,
+                contents=prompt,
+                config=genai_types.GenerateContentConfig(
+                    system_instruction=self.cfg.system_prompt,
+                    max_output_tokens=self.cfg.max_tokens,
+                ),
             )
             return resp.text.strip()
-        except (ResourceExhausted, ServiceUnavailable, DeadlineExceeded):
-            return None
+        except genai_errors.APIError as e:
+            if e.code in (429, 503):
+                return None
+            logger.error(f"Gemini API error {e.code}: {e}")
+            return "ERROR"
         except Exception as e:
             logger.error(f"Gemini error: {e}")
             return "ERROR"
-        
+
+
+def get_anthropic_client(system_prompt: SystemPrompt) -> AnthropicClient:
+    cfg = ModelConfig(required_key="ANTHROPIC_API_KEY", system_prompt=system_prompt)
+    return AnthropicClient(AsyncAnthropic(), cfg)
+
+
+def get_openai_client(system_prompt: SystemPrompt) -> OpenAIClient:
+    cfg = ModelConfig(required_key="OPENAI_API_KEY", system_prompt=system_prompt)
+    return OpenAIClient(AsyncOpenAI(), cfg)
+
+
+def get_gemini_client(system_prompt: SystemPrompt) -> GeminiClient:
+    cfg = ModelConfig(required_key="GOOGLE_API_KEY", system_prompt=system_prompt)
+    client = genai.Client(api_key=os.environ["GOOGLE_API_KEY"])
+    return GeminiClient(client, cfg)
+
+
+CLIENT_FUNCTIONS = {
+    ModelProvider.CLAUDE: get_anthropic_client,
+    ModelProvider.OPEN_AI: get_openai_client,
+    ModelProvider.GEMINI: get_gemini_client,
+}
