@@ -2,13 +2,16 @@
 
 import asyncio
 import logging
+import os
 from asyncio import Semaphore
 from dataclasses import dataclass
+from enum import StrEnum
 from typing import Protocol
 
 import anthropic
 import openai
 from anthropic import AsyncAnthropic
+from dotenv import load_dotenv
 from google.api_core.exceptions import (
     DeadlineExceeded,
     ResourceExhausted,
@@ -17,18 +20,20 @@ from google.api_core.exceptions import (
 from google.generativeai import GenerativeModel
 from openai import AsyncOpenAI
 
+from prompts import SystemPrompt
+
 logger = logging.getLogger(__name__)
 
-MODELS = {
-    "claude": "claude-haiku-4-5-20251001",
-    "openai": "gpt-4o-mini",
-    "gemini": "gemini-1.5-flash",
-}
+class ModelProvider(StrEnum):
+    CLAUDE = "claude-haiku-4-5-20251001"
+    OPEN_AI = 'gpt-4o-mini'
+    GEMINI = 'gemini-1.5-flash'
+
 
 @dataclass
 class ModelConfig:
-    model: str
-    system_prompt: str 
+    required_key: str
+    system_prompt: SystemPrompt 
     max_tokens: int = 150
     max_rows: int | None  = 15
     max_workers: int = 3 
@@ -65,6 +70,11 @@ class LLM_Client(Protocol):
     async def call_model(self, prompt: str, semaphore: Semaphore) -> str:
         async with semaphore:
             return await self._call_model(prompt)
+    
+    def ensure_key(self) -> None:
+        key = self.cfg.required_key
+        if os.getenv(key) is None:
+            raise EnvironmentError(f'Missing Required Key to initial client {key}')
 
 
 class AnthropicClient(LLM_Client):
@@ -75,7 +85,7 @@ class AnthropicClient(LLM_Client):
     async def _call_model_once(self, prompt: str) -> str | None:
         try:
             msg = await self.client.messages.create(
-                model=self.cfg.model,
+                model=ModelProvider.CLAUDE,
                 max_tokens=self.cfg.max_tokens,
                 system=self.cfg.system_prompt,
                 messages=[{"role": "user", "content": prompt}],
@@ -101,7 +111,7 @@ class OpenAIClient(LLM_Client):
     async def _call_model_once(self, prompt: str) -> str | None:
         try: 
             resp = await self.client.chat.completions.create(
-                model = self.cfg.model,
+                model = ModelProvider.OPEN_AI,
                 max_tokens = self.cfg.max_tokens,
                 messages = [
                     {'role': 'system', 'content': self.cfg.system_prompt},
@@ -138,3 +148,24 @@ class GeminiClient(LLM_Client):
             logger.error(f"Gemini error: {e}")
             return "ERROR"
         
+
+
+def get_anthropic_client(system_prompt: SystemPrompt) -> AnthropicClient:
+    cfg= ModelConfig(system_prompt)
+    return AnthropicClient(AsyncAnthropic(), cfg)
+
+
+def get_openai_client(system_prompt: SystemPrompt) -> OpenAIClient:
+    cfg = ModelConfig(system_prompt)
+    return OpenAIClient(AsyncOpenAI(), cfg)
+
+
+def get_gemini_client(system_prompt: SystemPrompt) -> GeminiClient:
+    cfg = ModelConfig(system_prompt)
+    return GeminiClient(GenerativeModel(ModelProvider.GEMINI), cfg)
+
+CLIENT_FUNCTIONS = {
+    ModelProvider.CLAUDE: get_anthropic_client,
+    ModelProvider.OPEN_AI: get_openai_client,
+    ModelProvider.GEMINI: get_gemini_client
+}
