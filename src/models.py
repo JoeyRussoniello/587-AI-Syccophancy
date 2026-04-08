@@ -105,7 +105,8 @@ class LLM_Client(Protocol):
     async def call_model(self, prompt: str, semaphore: Semaphore) -> str:
         async with semaphore:
             msg = await self._call_model(prompt)
-            logger.debug('Got response from model:\n%s', msg)
+            logger.debug("Got response from model:\n%s", msg)
+            return msg
 
 
 class AnthropicClient(LLM_Client):
@@ -139,7 +140,12 @@ class AnthropicClient(LLM_Client):
 
 
 class OpenAIClient(LLM_Client):
-    def __init__(self, client: AsyncOpenAI, configuration: ModelConfig, provider: ModelProvider = ModelProvider.OPEN_AI):
+    def __init__(
+        self,
+        client: AsyncOpenAI,
+        configuration: ModelConfig,
+        provider: ModelProvider,
+    ):
         self.client = client
         self.cfg = configuration
         self.provider = provider
@@ -208,7 +214,9 @@ def get_anthropic_client(system_prompt: SystemPrompt, **kwargs) -> AnthropicClie
     return AnthropicClient(AsyncAnthropic(), cfg)
 
 
-def get_openai_client(system_prompt: SystemPrompt, provider: ModelProvider | None = None, **kwargs) -> OpenAIClient:
+def get_openai_client(
+    system_prompt: SystemPrompt, provider: ModelProvider = ModelProvider.OPEN_AI, **kwargs
+) -> OpenAIClient:
     cfg = ModelConfig(
         required_key="OPENAI_API_KEY", system_prompt=system_prompt, **kwargs
     )
