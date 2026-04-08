@@ -1,6 +1,7 @@
 import asyncio
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Sequence
 
 from tqdm import tqdm
 
@@ -78,7 +79,7 @@ async def get_responses_for_model(
 
 
 async def get_responses_for_models(
-    models: list[ModelName],
+    models: Sequence[ModelName],
     config: ResponseCollectionConfig,
 ) -> None:
     """Run response collection for multiple models concurrently."""

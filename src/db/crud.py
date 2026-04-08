@@ -48,7 +48,7 @@ def ensure_system_prompt(session: Session, text: SystemPromptEnum) -> SystemProm
     row = session.query(SystemPrompt).filter_by(system_prompt_name=text.name).first()
     if row is not None:
         if row.system_prompt != str(text):
-            row.system_prompt = str(text)
+            setattr(row, "system_prompt", str(text))
             session.flush()
         return row
 
