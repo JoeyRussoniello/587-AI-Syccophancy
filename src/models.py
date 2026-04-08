@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 class ModelProvider(StrEnum):
     CLAUDE = "claude-haiku-4-5-20251001"
-    OPEN_AI = "gpt-4o-mini"
+    OPEN_AI = "gpt-4.1-mini"
     GEMINI = "gemini-2.5-flash"
 
 
@@ -85,7 +85,7 @@ class LLM_Client(Protocol):
 
     cfg: ModelConfig
 
-    def __init__(self, client: Any, configuration: ModelConfig): ...
+    def __init__(self, client: Any, configuration: ModelConfig, **kwargs): ...
 
     async def _call_model_once(self, prompt: str) -> str | None: ...
 
@@ -104,7 +104,8 @@ class LLM_Client(Protocol):
 
     async def call_model(self, prompt: str, semaphore: Semaphore) -> str:
         async with semaphore:
-            return await self._call_model(prompt)
+            msg = await self._call_model(prompt)
+            logger.debug('Got response from model:\n%s', msg)
 
 
 class AnthropicClient(LLM_Client):
@@ -138,14 +139,15 @@ class AnthropicClient(LLM_Client):
 
 
 class OpenAIClient(LLM_Client):
-    def __init__(self, client: AsyncOpenAI, configuration: ModelConfig):
+    def __init__(self, client: AsyncOpenAI, configuration: ModelConfig, provider: ModelProvider = ModelProvider.OPEN_AI):
         self.client = client
         self.cfg = configuration
+        self.provider = provider
 
     async def _call_model_once(self, prompt: str) -> str | None:
         try:
             resp = await self.client.chat.completions.create(
-                model=ModelProvider.OPEN_AI,
+                model=self.provider,
                 max_tokens=len(prompt) + self.cfg.max_tokens,
                 messages=[
                     {"role": "system", "content": self.cfg.system_prompt},
@@ -206,11 +208,11 @@ def get_anthropic_client(system_prompt: SystemPrompt, **kwargs) -> AnthropicClie
     return AnthropicClient(AsyncAnthropic(), cfg)
 
 
-def get_openai_client(system_prompt: SystemPrompt, **kwargs) -> OpenAIClient:
+def get_openai_client(system_prompt: SystemPrompt, provider: ModelProvider | None = None, **kwargs) -> OpenAIClient:
     cfg = ModelConfig(
         required_key="OPENAI_API_KEY", system_prompt=system_prompt, **kwargs
     )
-    return OpenAIClient(AsyncOpenAI(), cfg)
+    return OpenAIClient(AsyncOpenAI(), cfg, provider)
 
 
 def get_gemini_client(system_prompt: SystemPrompt, **kwargs) -> GeminiClient:
