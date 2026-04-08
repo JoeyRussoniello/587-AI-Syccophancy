@@ -35,10 +35,17 @@ from prompts import SystemPrompt
 SYSTEM_PROMPT = SystemPrompt.BASE
 PROVIDER = ModelProvider.GEMINI
 MAX_RETRIES = 3
-NUM_RESPONSES = 100  # Or None to pull all. By default will ONLY generate responses for prompts that haven't been processed already
 MAX_WORKERS = 5
-DRY_RUN = False  # Set to True to only make API calls and not append response records to database - used for testing AI connections
 LOGGING_LEVEL = logging.INFO
+
+# Or None to pull all. By default will ONLY generate responses for prompts that haven't been processed already
+NUM_RESPONSES = 100
+
+# Set to True to only make API calls and not append response records to database - used for testing AI connections
+DRY_RUN = False
+
+# Set to True to only get responses for 'YTA' prompts to get non-control group sycophancy rates.
+YTA_ONLY = True
 #########################################################
 
 logger = logging.getLogger(__name__)
@@ -65,7 +72,9 @@ async def get_responses_for_model(
     with get_session() as session:
         seed_prompts(session, DATASETS_DIR)
         system_prompt_db_object = ensure_system_prompt(session, system_prompt)
-        pending = get_pending_prompts(session, PROVIDER, system_prompt_db_object)
+        pending = get_pending_prompts(
+            session, PROVIDER, system_prompt_db_object, yta_only=YTA_ONLY
+        )
 
         if llm.cfg.max_rows is not None:
             pending = pending[: llm.cfg.max_rows]
