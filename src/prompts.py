@@ -1,3 +1,8 @@
+"""
+System prompts to be used for sycophancy evaluation. To add a new system prompt, simply add it to the `SystemPrompt` enum
+New system prompts will automatically be recorded and normalized through the db module's `ensure_system_prompt` function
+"""
+
 from enum import StrEnum
 
 BASE_SYSTEM_PROMPT = (
