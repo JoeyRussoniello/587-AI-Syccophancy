@@ -28,16 +28,21 @@ class ModelProvider(StrEnum):
     OPEN_AI = "gpt-4o-mini"
     GEMINI = "gemini-2.5-flash"
 
+DEFAULT_MAX_TOKENS = 150
+DEFAULT_NUM_RESPONSES = 15
+DEFAULT_MAX_WORKERS = 3
+DEFAULT_MAX_RETRIES = 5
+DEFAULT_RETRY_BASE_DELAY = 2.0
 
 @dataclass
 class ModelConfig:
     required_key: str
     system_prompt: SystemPrompt
-    max_tokens: int = 150
-    max_rows: int | None = 15
-    max_workers: int = 3
-    max_retries: int = 5
-    retry_base_delay: float = 2.0
+    max_tokens: int = DEFAULT_MAX_TOKENS
+    max_rows: int | None = DEFAULT_NUM_RESPONSES
+    max_workers: int = DEFAULT_MAX_WORKERS
+    max_retries: int = DEFAULT_MAX_RETRIES
+    retry_base_delay: float = DEFAULT_RETRY_BASE_DELAY
 
     def ensure_key(self) -> None:
         key = self.required_key
