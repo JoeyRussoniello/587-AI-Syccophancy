@@ -18,7 +18,7 @@ def test_get_responses_for_models_uses_one_semaphore_per_provider(
     monkeypatch,
 ):
     models = [
-        Model.OPEN_AI,
+        Model.GPT_4_1_MINI,
         Model.GEMINI,
     ]
     llm_by_provider = {str(model): object() for model in models}
@@ -87,10 +87,10 @@ def test_get_responses_for_models_uses_one_semaphore_per_provider(
     calls_by_provider = {str(model): call for model, *call in calls}
     assert set(calls_by_provider) == {str(model) for model in models}
 
-    openai_call = calls_by_provider[str(Model.OPEN_AI)]
+    openai_call = calls_by_provider[str(Model.GPT_4_1_MINI)]
     gemini_call = calls_by_provider[str(Model.GEMINI)]
 
-    assert openai_call[0] is llm_by_provider[str(Model.OPEN_AI)]
+    assert openai_call[0] is llm_by_provider[str(Model.GPT_4_1_MINI)]
     assert gemini_call[0] is llm_by_provider[str(Model.GEMINI)]
     assert openai_call[1] == config
     assert gemini_call[1] == config

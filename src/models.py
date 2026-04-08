@@ -63,7 +63,7 @@ class Model(ModelName):
     """Supported concrete model identifiers used in the project."""
 
     CLAUDE = "claude-haiku-4-5-20251001"
-    OPEN_AI = "gpt-4.1-mini"
+    GPT_4_1_MINI = "gpt-4.1-mini"
     GPT_5_4_MINI = "gpt-5.4-mini"
     GEMINI = "gemini-2.5-flash"
 
@@ -72,7 +72,7 @@ class Model(ModelName):
         match self:
             case Model.CLAUDE:
                 return ProviderFamily.ANTHROPIC
-            case Model.OPEN_AI | Model.GPT_5_4_MINI:
+            case Model.GPT_4_1_MINI | Model.GPT_5_4_MINI:
                 return ProviderFamily.OPENAI
             case Model.GEMINI:
                 return ProviderFamily.GOOGLE
@@ -295,7 +295,7 @@ def get_anthropic_client(
 
 def get_openai_client(
     system_prompt: SystemPrompt,
-    model_name: ModelName = Model.OPEN_AI,
+    model_name: ModelName = Model.GPT_4_1_MINI,
     **kwargs,
 ) -> OpenAIClient:
     """Build the default OpenAI client wrapper for a given system prompt."""
