@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 class ModelProvider(StrEnum):
     CLAUDE = "claude-haiku-4-5-20251001"
     OPEN_AI = "gpt-4o-mini"
-    GEMINI = "gemini-2.0-flash"
+    GEMINI = "gemini-2.5-flash"
 
 
 @dataclass
@@ -65,7 +65,8 @@ class LLM_Client(Protocol):
     async def _call_model(self, prompt: str) -> str:
         delay = self.cfg.retry_base_delay
         for attempt in range(self.cfg.max_retries):
-            logging.debug('Attempt %d to _call_model_once.', attempt + 1)
+            if attempt >= 1:
+                logging.debug('Attempt %d to _call_model_once.', attempt + 1)
             result = await self._call_model_once(prompt)
             if result is not None:
                 return result
