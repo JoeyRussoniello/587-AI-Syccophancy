@@ -25,7 +25,7 @@ from models import Model
 from prompts import SystemPrompt
 from response_collection import ResponseCollectionConfig, get_responses_for_models
 
-#########################################################
+######################################################################################################################
 # CONFIG - Change these variables to change the experiment settings
 SYSTEM_PROMPT = SystemPrompt.HONEST_ASSISTANT
 MODELS = [
@@ -44,7 +44,7 @@ DRY_RUN = False
 
 # Set to True to only get responses for 'YTA' prompts to get non-control group sycophancy rates.
 YTA_ONLY = True
-#########################################################
+######################################################################################################################
 
 logger = logging.getLogger(__name__)
 REPO_ROOT = Path(__file__).parent
