@@ -36,6 +36,7 @@ class LLMResponse(Base):
         Integer, ForeignKey("system_prompts.system_prompt_id"), nullable=False
     )
     model = Column(String, nullable=False)
+    llm_label = Column(String, nullable=True)
     response = Column(Text, nullable=False)
 
     prompt = relationship("Prompt", back_populates="responses")
