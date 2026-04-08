@@ -73,9 +73,11 @@ class ModelConfig:
     def ensure_key(self) -> None:
         """Validate that the required environment variable is present."""
 
-        key = self.required_key
-        if os.getenv(key) is None:
-            raise EnvironmentError(f"Missing Required Key to initialize client {key}")
+        key = os.getenv(self.required_key)
+        if key is None or key.strip() == "":
+            raise EnvironmentError(
+                f"Missing Required Environment Variable to initialize client {self.required_key}"
+            )
 
     def __post_init__(self) -> None:
         self.ensure_key()
