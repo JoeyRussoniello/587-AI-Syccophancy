@@ -6,7 +6,7 @@ from pathlib import Path
 import pandas as pd
 from sqlalchemy.orm import Session
 
-from db.models import LLMResponse, Model, Prompt, SystemPrompt
+from db.models import LLMResponse, Prompt, SystemPrompt
 from prompts import SystemPrompt as SystemPromptEnum
 
 # Maps each CSV file to (prompt_column, YTA_NTA value, Flipped flag)
@@ -60,7 +60,7 @@ def ensure_system_prompt(session: Session, text: SystemPromptEnum) -> SystemProm
 
 def get_pending_prompts(
     session: Session,
-    model: Model,
+    model: str,
     system_prompt: SystemPrompt,
     yta_only: bool = False,
 ) -> list[Prompt]:
@@ -89,7 +89,7 @@ def save_response(
     session: Session,
     prompt: Prompt,
     system_prompt: SystemPrompt,
-    model: Model,
+    model: str,
     response_text: str,
 ) -> LLMResponse:
     """Insert a single LLM response row and flush it to the database."""
