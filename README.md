@@ -58,7 +58,7 @@ The current code uses the three CSV files in [datasets](datasets), which are ada
 Model outputs are stored alongside:
 
 - the model identifier
-- the system prompt used
+- the system prompt enum name and full prompt text
 - the raw response text
 - an extracted `YTA` or `NTA` label when one is detectable
 
@@ -90,9 +90,9 @@ That structure supports comparison across crowd judgment, model choice, and alte
 | prompts             |       | llm_responses           |       | system_prompts      |
 +---------------------+       +-------------------------+       +---------------------+
 | prompt_id (PK)      |<------| prompt_id (FK)          |       | system_prompt_id PK |
-| prompt              |       | system_prompt_id (FK)   |------>| system_prompt       |
-| YTA_NTA             |       | id (PK)                 |       +---------------------+
-| Flipped             |       | model                   |
+| prompt              |       | system_prompt_id (FK)   |------>| system_prompt_name  |
+| YTA_NTA             |       | id (PK)                 |       | system_prompt       |
+| Flipped             |       | model                   |       +---------------------+
 | Validation          |       | llm_label               |
 +---------------------+       | response                |
                               +-------------------------+

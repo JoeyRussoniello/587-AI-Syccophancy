@@ -28,6 +28,7 @@ class SystemPrompt(Base):
     __tablename__ = "system_prompts"
 
     system_prompt_id = Column(Integer, primary_key=True, autoincrement=True)
+    system_prompt_name = Column(String, nullable=False)
     system_prompt = Column(Text, nullable=False)
 
     responses = relationship("LLMResponse", back_populates="system_prompt")
