@@ -6,7 +6,7 @@ import os
 from asyncio import Semaphore
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Protocol
+from typing import Callable, Protocol
 
 import anthropic
 import openai
@@ -33,7 +33,7 @@ class ModelProvider(StrEnum):
 class ModelConfig:
     required_key: str
     system_prompt: SystemPrompt
-    max_tokens: int = 1000
+    max_tokens: int = 150
     max_rows: int | None = 15
     max_workers: int = 3
     max_retries: int = 5
@@ -89,7 +89,7 @@ class AnthropicClient(LLM_Client):
         try:
             msg = await self.client.messages.create(
                 model=ModelProvider.CLAUDE,
-                max_tokens=self.cfg.max_tokens,
+                max_tokens=len(prompt) + self.cfg.max_tokens,
                 system=self.cfg.system_prompt,
                 messages=[{"role": "user", "content": prompt}],
             )
@@ -115,7 +115,7 @@ class OpenAIClient(LLM_Client):
         try:
             resp = await self.client.chat.completions.create(
                 model=ModelProvider.OPEN_AI,
-                max_tokens=self.cfg.max_tokens,
+                max_tokens=len(prompt) + self.cfg.max_tokens,
                 messages=[
                     {"role": "system", "content": self.cfg.system_prompt},
                     {"role": "user", "content": prompt},
@@ -146,7 +146,7 @@ class GeminiClient(LLM_Client):
                 contents=str(prompt),
                 config=genai_types.GenerateContentConfig(
                     system_instruction=str(self.cfg.system_prompt),
-                    max_output_tokens=self.cfg.max_tokens,
+                    max_output_tokens=len(prompt) + self.cfg.max_tokens,
                 ),
             )
             return resp.text.strip()
@@ -175,8 +175,9 @@ def get_gemini_client(system_prompt: SystemPrompt) -> GeminiClient:
     client = genai.Client()
     return GeminiClient(client, cfg)
 
+ClientFn = Callable[[SystemPrompt], LLM_Client]
 
-CLIENT_FUNCTIONS = {
+CLIENT_FUNCTIONS: dict[ModelProvider, ClientFn]= {
     ModelProvider.CLAUDE: get_anthropic_client,
     ModelProvider.OPEN_AI: get_openai_client,
     ModelProvider.GEMINI: get_gemini_client,
