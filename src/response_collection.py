@@ -8,7 +8,7 @@ from tqdm import tqdm
 from db.crud import (
     ensure_system_prompt,
     get_pending_prompts,
-    save_response,
+    save_responses_bulk,
     seed_prompts,
 )
 from db.database import get_session
@@ -71,22 +71,15 @@ async def get_responses_for_model(
             PendingPromptData(prompt_id=prompt.prompt_id, prompt_text=prompt.prompt)
             for prompt in pending
         ]
-        system_prompt_id = system_prompt_db_object.system_prompt_id
-
         if llm.cfg.max_rows is not None:
             pending_prompts = pending_prompts[: llm.cfg.max_rows]
 
-        async def process(prompt: PendingPromptData) -> None:
+        collected: list[tuple] = []
+
+        async def process(prompt) -> None:
             response = await llm.call_model(prompt.prompt_text, semaphore)
-            if response != "ERROR" and not config.dry_run:
-                with get_session() as write_session:
-                    save_response(
-                        write_session,
-                        prompt.prompt_id,
-                        system_prompt_id,
-                        str(model),
-                        response,
-                    )
+            if response != "ERROR":
+                collected.append((prompt, response))
 
         tasks = [asyncio.create_task(process(prompt)) for prompt in pending_prompts]
         await run_tasks_with_progress(
@@ -94,6 +87,11 @@ async def get_responses_for_model(
             f"{model} prompts",
             position=progress_position,
         )
+
+        if not config.dry_run and collected:
+            save_responses_bulk(
+                session, collected, system_prompt_db_object, str(model)
+            )
 
 
 async def get_responses_for_models(
