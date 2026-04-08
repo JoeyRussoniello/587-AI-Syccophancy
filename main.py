@@ -37,17 +37,17 @@ from prompts import SystemPrompt
 SYSTEM_PROMPT = SystemPrompt.BASE
 PROVIDER = ModelProvider.GEMINI
 MAX_RETRIES = 3
-MAX_WORKERS = 1
+MAX_WORKERS = 5
 LOGGING_LEVEL = logging.INFO
 
 # Or None to pull all. By default will ONLY generate responses for prompts that haven't been processed already
-MAX_RESPONSES = 3
+MAX_RESPONSES = 15
 
 # Set to True to only make API calls and not append response records to database - used for testing AI connections
-DRY_RUN = True
+DRY_RUN = False
 
 # Set to True to only get responses for 'YTA' prompts to get non-control group sycophancy rates.
-YTA_ONLY = False
+YTA_ONLY = True
 #########################################################
 
 logger = logging.getLogger(__name__)
