@@ -215,7 +215,9 @@ def get_anthropic_client(system_prompt: SystemPrompt, **kwargs) -> AnthropicClie
 
 
 def get_openai_client(
-    system_prompt: SystemPrompt, provider: ModelProvider = ModelProvider.OPEN_AI, **kwargs
+    system_prompt: SystemPrompt,
+    provider: ModelProvider = ModelProvider.OPEN_AI,
+    **kwargs,
 ) -> OpenAIClient:
     cfg = ModelConfig(
         required_key="OPENAI_API_KEY", system_prompt=system_prompt, **kwargs
