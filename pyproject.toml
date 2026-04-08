@@ -24,6 +24,7 @@ dev = [
     "pandas-stubs>=3.0.0.260204",
     "pytest>=9.0.3",
     "ruff>=0.15.9",
+    "types-tqdm>=4.67.3.20260408",
 ]
 
 [tool.setuptools.packages.find]

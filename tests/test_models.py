@@ -8,6 +8,14 @@ import models
 from prompts import SystemPrompt
 
 
+class FakeModelName(models.ModelName):
+    TEST_OPENAI = "test-openai-model"
+
+    @property
+    def family(self) -> models.ProviderFamily:
+        return models.ProviderFamily.OPENAI
+
+
 class DummyClient(models.LLM_Client):
     """A mock LLM client for testing retry behavior"""
 
@@ -54,6 +62,7 @@ def test_model_config_requires_environment_key(monkeypatch: pytest.MonkeyPatch):
         models.ModelConfig(
             required_key="TEST_API_KEY",
             system_prompt=SystemPrompt.BASE,
+            model_name=FakeModelName.TEST_OPENAI,
         )
 
 
@@ -63,9 +72,11 @@ def test_model_config_allows_present_environment_key(monkeypatch: pytest.MonkeyP
     cfg = models.ModelConfig(
         required_key="TEST_API_KEY",
         system_prompt=SystemPrompt.BASE,
+        model_name=FakeModelName.TEST_OPENAI,
     )
 
     assert cfg.required_key == "TEST_API_KEY"
+    assert cfg.model_name == FakeModelName.TEST_OPENAI
 
 
 def test_call_model_retries_until_success():
@@ -203,6 +214,34 @@ def test_openai_client_retries_on_retryable_status(monkeypatch: pytest.MonkeyPat
     result = asyncio.run(openai_client._call_model_once("prompt text"))
 
     assert result is None
+
+
+def test_get_openai_client_uses_selected_model_name(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.setenv("OPENAI_API_KEY", "present")
+
+    openai_client = models.get_openai_client(
+        SystemPrompt.BASE,
+        model_name=models.Model.GPT_5_4_MINI,
+    )
+
+    assert openai_client.cfg.model_name == models.Model.GPT_5_4_MINI
+
+
+def test_create_client_uses_explicit_model_spec(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "present")
+
+    client = models.create_client(
+        SystemPrompt.BASE,
+        FakeModelName.TEST_OPENAI,
+    )
+
+    assert client.cfg.model_name == FakeModelName.TEST_OPENAI
+
+
+def test_model_provider_exposes_family():
+    assert models.Model.GPT_5_4_MINI.family == models.ProviderFamily.OPENAI
 
 
 def test_gemini_client_returns_error_when_text_missing(monkeypatch: pytest.MonkeyPatch):

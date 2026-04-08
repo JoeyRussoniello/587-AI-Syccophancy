@@ -9,30 +9,30 @@
   - [X] SystemPrompts (system_prompt_id, system_prompt)
   - [X] Prompts (prompt_id, prompt, YTA_NTA, Flipped, Validation)
 
-## Gather LLM Data:
+## Gather LLM Data
 
-### Base (System prompt. No stress on anti-sycophancy) **Gather By 4/10 (Fri)** 
+### Base (System prompt. No stress on anti-sycophancy) **Gather By 4/10 (Fri)**
 
-- [ ] Claude (Brian)
-- [ ] OpenAI (Joey)
-- [ ] Gemini (Joey)
+- [X] Claude (Brian)
+- [X] OpenAI (Joey)
+- [X] Gemini (Joey)
 
 ### Resistant System Prompt **Gather by 4/13 (Mon)**
 
 - [ ] Claude (Brian)
-- [ ] OpenAI (Joey)
-- [ ] Gemini (Joey)
+- [X] OpenAI (Joey)
+- [X] Gemini (Joey)
   
 ### Resistant System Prompt + Few Shot Examples **Gather by 4/13 (Mon)**
 
-## Exploratory Data Analytics 
+## Exploratory Data Analytics
 
-- [ ] Examine Rates of false NTA (sycophantic) responses for each model - 4/15 Wed (Brian) 
+- [ ] Examine Rates of false NTA (sycophantic) responses for each model - 4/15 Wed (Brian)
 - [ ] Use SBERT to encode prompts (maybe cache in DB), analyze prompts for similarity - 4/20 Mon (Brian & Joey)
 - [ ] Use BertScore to compare LLM Reasoning to Crowdsourced Reasoning  - 4/20 Mon (Brian & Joey)
 - [ ] Qualitative Analysis. Do we see any similarity on when the AI fails to point out bad behavior. Pick examples - 4/22 (Wed) (Brian & Joey)
 
-## Additional Steps (If Time Allows):
+## Additional Steps (If Time Allows)
 
 Convert Converation to Multi-step (split by periods)
 
@@ -41,10 +41,10 @@ Convert Converation to Multi-step (split by periods)
 - Presentation (Mon April 27th)
   - [ ] So what? Who cares (from annotated bibs)
   - [ ] So what? Who cares (from annotated bibs)
-  - [ ] Our Methods 
+  - [ ] Our Methods
   - [ ] Results (graphs, numbers, etc)
   - [ ] Discussion (impacts of system prompting, what this means for future research)
-  - [ ] Challenges 
+  - [ ] Challenges
   - [ ] Conclusion
 - Paper (Thursday April 30th)
   - [ ] Introduction (Joey)

@@ -6,7 +6,7 @@ import os
 from asyncio import Semaphore
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Any, Callable, Protocol
+from typing import Any, Protocol
 
 import anthropic
 import openai
@@ -22,20 +22,64 @@ from prompts import SystemPrompt
 load_dotenv()
 logger = logging.getLogger(__name__)
 
-
-class ModelProvider(StrEnum):
-    """Supported model identifiers for each provider used in the project."""
-
-    CLAUDE = "claude-haiku-4-5-20251001"
-    OPEN_AI = "gpt-4.1-mini"
-    GEMINI = "gemini-2.5-flash"
-
-
 DEFAULT_MAX_TOKENS = 150
 DEFAULT_NUM_RESPONSES = 15
 DEFAULT_MAX_WORKERS = 3
 DEFAULT_MAX_RETRIES = 5
 DEFAULT_RETRY_BASE_DELAY = 2.0
+
+
+class ProviderFamily(StrEnum):
+    """Model API families supported by the project."""
+
+    ANTHROPIC = "anthropic"
+    OPENAI = "openai"
+    GOOGLE = "google"
+
+    @property
+    def required_key(self) -> str:
+        """Environment variable required for this provider family."""
+
+        match self:
+            case ProviderFamily.ANTHROPIC:
+                return "ANTHROPIC_API_KEY"
+            case ProviderFamily.OPENAI:
+                return "OPENAI_API_KEY"
+            case ProviderFamily.GOOGLE:
+                return "GOOGLE_API_KEY"
+
+
+class ModelName(StrEnum):
+    """Base enum type for concrete model identifiers."""
+
+    @property
+    def family(self) -> ProviderFamily:
+        """Provider family responsible for serving this model."""
+
+        raise NotImplementedError
+
+
+class Model(ModelName):
+    """Supported concrete model identifiers used in the project."""
+
+    CLAUDE = "claude-haiku-4-5-20251001"
+    OPEN_AI = "gpt-4.1-mini"
+    GPT_5_4_MINI = "gpt-5.4-mini"
+    GEMINI = "gemini-2.5-flash"
+
+    @property
+    def family(self) -> ProviderFamily:
+        match self:
+            case Model.CLAUDE:
+                return ProviderFamily.ANTHROPIC
+            case Model.OPEN_AI | Model.GPT_5_4_MINI:
+                return ProviderFamily.OPENAI
+            case Model.GEMINI:
+                return ProviderFamily.GOOGLE
+            case _:
+                raise ValueError(
+                    f"Unimplemented model family for Model enum value {self}."
+                )
 
 
 def _strip_text(value: str | None) -> str | None:
@@ -64,6 +108,7 @@ class ModelConfig:
 
     required_key: str
     system_prompt: SystemPrompt
+    model_name: ModelName
     max_tokens: int = DEFAULT_MAX_TOKENS
     max_rows: int | None = DEFAULT_NUM_RESPONSES
     max_workers: int = DEFAULT_MAX_WORKERS
@@ -144,7 +189,7 @@ class AnthropicClient(LLM_Client):
     async def _call_model_once(self, prompt: str) -> str | None:
         try:
             msg = await self.client.messages.create(
-                model=ModelProvider.CLAUDE,
+                model=self.cfg.model_name,
                 max_tokens=len(prompt) + self.cfg.max_tokens,
                 system=self.cfg.system_prompt,
                 messages=[{"role": "user", "content": prompt}],
@@ -169,20 +214,14 @@ class AnthropicClient(LLM_Client):
 class OpenAIClient(LLM_Client):
     """OpenAI implementation of the shared LLM client protocol."""
 
-    def __init__(
-        self,
-        client: AsyncOpenAI,
-        configuration: ModelConfig,
-        provider: ModelProvider,
-    ):
+    def __init__(self, client: AsyncOpenAI, configuration: ModelConfig):
         self.client = client
         self.cfg = configuration
-        self.provider = provider
 
     async def _call_model_once(self, prompt: str) -> str | None:
         try:
             resp = await self.client.chat.completions.create(
-                model=self.provider,
+                model=self.cfg.model_name,
                 max_tokens=len(prompt) + self.cfg.max_tokens,
                 messages=[
                     {"role": "system", "content": self.cfg.system_prompt},
@@ -216,7 +255,7 @@ class GeminiClient(LLM_Client):
     async def _call_model_once(self, prompt: str) -> str | None:
         try:
             resp = await self.client.aio.models.generate_content(
-                model=ModelProvider.GEMINI,
+                model=self.cfg.model_name,
                 contents=str(prompt),
                 config=genai_types.GenerateContentConfig(
                     system_instruction=str(self.cfg.system_prompt),
@@ -238,42 +277,82 @@ class GeminiClient(LLM_Client):
             return "ERROR"
 
 
-def get_anthropic_client(system_prompt: SystemPrompt, **kwargs) -> AnthropicClient:
+def get_anthropic_client(
+    system_prompt: SystemPrompt,
+    model_name: ModelName = Model.CLAUDE,
+    **kwargs,
+) -> AnthropicClient:
     """Build the default Anthropic client wrapper for a given system prompt."""
 
     cfg = ModelConfig(
-        required_key="ANTHROPIC_API_KEY", system_prompt=system_prompt, **kwargs
+        required_key=ProviderFamily.ANTHROPIC.required_key,
+        system_prompt=system_prompt,
+        model_name=model_name,
+        **kwargs,
     )
     return AnthropicClient(AsyncAnthropic(), cfg)
 
 
 def get_openai_client(
     system_prompt: SystemPrompt,
-    provider: ModelProvider = ModelProvider.OPEN_AI,
+    model_name: ModelName = Model.OPEN_AI,
     **kwargs,
 ) -> OpenAIClient:
     """Build the default OpenAI client wrapper for a given system prompt."""
 
     cfg = ModelConfig(
-        required_key="OPENAI_API_KEY", system_prompt=system_prompt, **kwargs
+        required_key=ProviderFamily.OPENAI.required_key,
+        system_prompt=system_prompt,
+        model_name=model_name,
+        **kwargs,
     )
-    return OpenAIClient(AsyncOpenAI(), cfg, provider)
+    return OpenAIClient(AsyncOpenAI(), cfg)
 
 
-def get_gemini_client(system_prompt: SystemPrompt, **kwargs) -> GeminiClient:
+def get_gemini_client(
+    system_prompt: SystemPrompt,
+    model_name: ModelName = Model.GEMINI,
+    **kwargs,
+) -> GeminiClient:
     """Build the default Gemini client wrapper for a given system prompt."""
 
     cfg = ModelConfig(
-        required_key="GOOGLE_API_KEY", system_prompt=system_prompt, **kwargs
+        required_key=ProviderFamily.GOOGLE.required_key,
+        system_prompt=system_prompt,
+        model_name=model_name,
+        **kwargs,
     )
     client = genai.Client()
     return GeminiClient(client, cfg)
 
 
-ClientFn = Callable[..., LLM_Client]
+def create_client(
+    system_prompt: SystemPrompt, model: ModelName, **kwargs
+) -> LLM_Client:
+    """Create a client for a model using the model's provider family."""
 
-CLIENT_FUNCTIONS: dict[ModelProvider, ClientFn] = {
-    ModelProvider.CLAUDE: get_anthropic_client,
-    ModelProvider.OPEN_AI: get_openai_client,
-    ModelProvider.GEMINI: get_gemini_client,
-}
+    match model.family:
+        case ProviderFamily.ANTHROPIC:
+            return get_anthropic_client(system_prompt, model_name=model, **kwargs)
+        case ProviderFamily.OPENAI:
+            return get_openai_client(system_prompt, model_name=model, **kwargs)
+        case ProviderFamily.GOOGLE:
+            return get_gemini_client(system_prompt, model_name=model, **kwargs)
+
+
+def build_llm(
+    system_prompt: SystemPrompt,
+    model: ModelName,
+    max_retries: int,
+    max_rows: int | None,
+    max_workers: int,
+) -> LLM_Client:
+    """Construct the configured client for a selected model."""
+
+    return create_client(
+        system_prompt,
+        model,
+        max_retries=max_retries,
+        max_rows=max_rows,
+        max_workers=max_workers,
+    )

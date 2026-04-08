@@ -20,22 +20,18 @@ import asyncio
 import logging
 from pathlib import Path
 
-from tqdm import tqdm
-
-from db.crud import (
-    ensure_system_prompt,
-    get_pending_prompts,
-    save_response,
-    seed_prompts,
-)
-from db.database import get_session, init_db
-from models import CLIENT_FUNCTIONS, LLM_Client, ModelProvider
+from db.database import init_db
+from models import Model
 from prompts import SystemPrompt
+from response_collection import ResponseCollectionConfig, get_responses_for_models
 
-#########################################################
+######################################################################################################################
 # CONFIG - Change these variables to change the experiment settings
 SYSTEM_PROMPT = SystemPrompt.HONEST_ASSISTANT
-PROVIDERS = [ModelProvider.CLAUDE]
+MODELS = [
+    Model.GEMINI,
+    Model.GPT_5_4_MINI,
+]
 MAX_RETRIES = 3
 MAX_WORKERS_PER_MODEL = 5
 LOGGING_LEVEL = logging.INFO
@@ -48,13 +44,23 @@ DRY_RUN = False
 
 # Set to True to only get responses for 'YTA' prompts to get non-control group sycophancy rates.
 YTA_ONLY = True
-#########################################################
+######################################################################################################################
 
 logger = logging.getLogger(__name__)
 REPO_ROOT = Path(__file__).parent
 DATASETS_DIR = REPO_ROOT / "datasets"
 LOGS_DIR = REPO_ROOT / "logs"
 LOG_FILE = LOGS_DIR / "app.log"
+
+COLLECTION_CONFIG = ResponseCollectionConfig(
+    system_prompt=SYSTEM_PROMPT,
+    datasets_dir=DATASETS_DIR,
+    max_retries=MAX_RETRIES,
+    max_rows=MAX_RESPONSES,
+    max_workers_per_model=MAX_WORKERS_PER_MODEL,
+    yta_only=YTA_ONLY,
+    dry_run=DRY_RUN,
+)
 
 LOGS_DIR.mkdir(parents=True, exist_ok=True)
 logging.basicConfig(
@@ -64,99 +70,10 @@ logging.basicConfig(
 )
 
 
-def build_llm(provider: ModelProvider) -> LLM_Client:
-    """Construct the configured client for a provider."""
-
-    client_fn = CLIENT_FUNCTIONS[provider]
-    return client_fn(
-        SYSTEM_PROMPT,
-        max_retries=MAX_RETRIES,
-        max_rows=MAX_RESPONSES,
-        max_workers=MAX_WORKERS_PER_MODEL,
-    )
-
-
-async def run_tasks_with_progress(
-    tasks: list[asyncio.Task[None]], description: str, position: int = 0
-) -> None:
-    """Await a batch of tasks while displaying tqdm progress."""
-
-    with tqdm(
-        total=len(tasks),
-        desc=description,
-        unit="prompt",
-        position=position,
-    ) as progress:
-        for task in asyncio.as_completed(tasks):
-            await task
-            progress.update(1)
-
-
-async def get_responses_for_model(
-    provider: ModelProvider,
-    llm: LLM_Client,
-    system_prompt: SystemPrompt,
-    semaphore: asyncio.Semaphore,
-    dry_run: bool = False,
-    progress_position: int = 0,
-) -> None:
-    """Fetch and persist model responses for all pending prompts."""
-
-    with get_session() as session:
-        system_prompt_db_object = ensure_system_prompt(session, system_prompt)
-        pending = get_pending_prompts(
-            session, provider, system_prompt_db_object, yta_only=YTA_ONLY
-        )
-
-        if llm.cfg.max_rows is not None:
-            pending = pending[: llm.cfg.max_rows]
-
-        async def process(prompt) -> None:
-            response = await llm.call_model(prompt.prompt, semaphore)
-            if response != "ERROR" and not dry_run:
-                save_response(
-                    session, prompt, system_prompt_db_object, provider, response
-                )
-
-        tasks = [asyncio.create_task(process(prompt)) for prompt in pending]
-        await run_tasks_with_progress(
-            tasks,
-            f"{provider} prompts",
-            position=progress_position,
-        )
-
-
-async def get_responses_for_models(
-    providers: list[ModelProvider],
-    system_prompt: SystemPrompt,
-    dry_run: bool = False,
-) -> None:
-    """Run response collection for multiple providers concurrently."""
-
-    with get_session() as session:
-        seed_prompts(session, DATASETS_DIR)
-        ensure_system_prompt(session, system_prompt)
-
-    tasks = [
-        asyncio.create_task(
-            get_responses_for_model(
-                provider,
-                build_llm(provider),
-                system_prompt,
-                asyncio.Semaphore(MAX_WORKERS_PER_MODEL),
-                dry_run=dry_run,
-                progress_position=index,
-            )
-        )
-        for index, provider in enumerate(providers)
-    ]
-    await asyncio.gather(*tasks)
-
-
 async def main() -> None:
     """Run the configured model collection job."""
 
-    await get_responses_for_models(PROVIDERS, SYSTEM_PROMPT, DRY_RUN)
+    await get_responses_for_models(MODELS, COLLECTION_CONFIG)
 
 
 if __name__ == "__main__":
