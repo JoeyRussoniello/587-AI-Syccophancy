@@ -124,10 +124,10 @@ Only the key for the selected provider is required for a given run, but the rele
 Edit the configuration constants near the top of [main.py](main.py):
 
 - `SYSTEM_PROMPT`
-- `PROVIDER`
+- `PROVIDERS`
 - `MAX_RETRIES`
 - `NUM_RESPONSES`
-- `MAX_WORKERS`
+- `MAX_WORKERS_PER_MODEL`
 
 Then run:
 
