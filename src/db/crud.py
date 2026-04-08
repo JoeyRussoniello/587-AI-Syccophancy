@@ -87,15 +87,15 @@ def _extract_label(response_text: str) -> str | None:
 
 def save_response(
     session: Session,
-    prompt: Prompt,
-    system_prompt: SystemPrompt,
+    prompt_id: int,
+    system_prompt_id: int,
     model: str,
     response_text: str,
 ) -> LLMResponse:
     """Insert a single LLM response row and flush it to the database."""
     row = LLMResponse(
-        prompt_id=prompt.prompt_id,
-        system_prompt_id=system_prompt.system_prompt_id,
+        prompt_id=prompt_id,
+        system_prompt_id=system_prompt_id,
         model=model,
         llm_label=_extract_label(response_text),
         response=response_text,

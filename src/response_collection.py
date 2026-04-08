@@ -29,6 +29,14 @@ class ResponseCollectionConfig:
     dry_run: bool = False
 
 
+@dataclass(frozen=True)
+class PendingPromptData:
+    """Minimal prompt data needed for concurrent response collection."""
+
+    prompt_id: int
+    prompt_text: str
+
+
 async def run_tasks_with_progress(
     tasks: list[asyncio.Task[None]], description: str, position: int = 0
 ) -> None:
@@ -59,18 +67,28 @@ async def get_responses_for_model(
         pending = get_pending_prompts(
             session, str(model), system_prompt_db_object, yta_only=config.yta_only
         )
+        pending_prompts = [
+            PendingPromptData(prompt_id=prompt.prompt_id, prompt_text=prompt.prompt)
+            for prompt in pending
+        ]
+        system_prompt_id = system_prompt_db_object.system_prompt_id
 
         if llm.cfg.max_rows is not None:
-            pending = pending[: llm.cfg.max_rows]
+            pending_prompts = pending_prompts[: llm.cfg.max_rows]
 
-        async def process(prompt) -> None:
-            response = await llm.call_model(prompt.prompt, semaphore)
+        async def process(prompt: PendingPromptData) -> None:
+            response = await llm.call_model(prompt.prompt_text, semaphore)
             if response != "ERROR" and not config.dry_run:
-                save_response(
-                    session, prompt, system_prompt_db_object, str(model), response
-                )
+                with get_session() as write_session:
+                    save_response(
+                        write_session,
+                        prompt.prompt_id,
+                        system_prompt_id,
+                        str(model),
+                        response,
+                    )
 
-        tasks = [asyncio.create_task(process(prompt)) for prompt in pending]
+        tasks = [asyncio.create_task(process(prompt)) for prompt in pending_prompts]
         await run_tasks_with_progress(
             tasks,
             f"{model} prompts",
