@@ -33,8 +33,8 @@ class ModelProvider(StrEnum):
 class ModelConfig:
     required_key: str
     system_prompt: SystemPrompt
-    max_tokens: int = 150
-    max_rows: int | None = 1
+    max_tokens: int = 1000
+    max_rows: int | None = 15
     max_workers: int = 3
     max_retries: int = 5
     retry_base_delay: float = 2.0
