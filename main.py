@@ -29,13 +29,16 @@ from db.crud import (
     seed_prompts,
 )
 from db.database import get_session, init_db
-from models import CLIENT_FUNCTIONS, LLM_Client, ModelProvider
+from models import LLM_Client, Model, ModelName, create_client
 from prompts import SystemPrompt
 
 #########################################################
 # CONFIG - Change these variables to change the experiment settings
 SYSTEM_PROMPT = SystemPrompt.HONEST_ASSISTANT
-PROVIDERS = [ModelProvider.GEMINI]
+MODELS = [
+    Model.GEMINI,
+    Model.GPT_5_4_MINI,
+]
 MAX_RETRIES = 3
 MAX_WORKERS_PER_MODEL = 5
 LOGGING_LEVEL = logging.INFO
@@ -64,12 +67,12 @@ logging.basicConfig(
 )
 
 
-def build_llm(provider: ModelProvider) -> LLM_Client:
-    """Construct the configured client for a provider."""
+def build_llm(model: ModelName) -> LLM_Client:
+    """Construct the configured client for a selected model."""
 
-    client_fn = CLIENT_FUNCTIONS[provider]
-    return client_fn(
+    return create_client(
         SYSTEM_PROMPT,
+        model,
         max_retries=MAX_RETRIES,
         max_rows=MAX_RESPONSES,
         max_workers=MAX_WORKERS_PER_MODEL,
@@ -93,7 +96,7 @@ async def run_tasks_with_progress(
 
 
 async def get_responses_for_model(
-    provider: ModelProvider,
+    model: ModelName,
     llm: LLM_Client,
     system_prompt: SystemPrompt,
     semaphore: asyncio.Semaphore,
@@ -105,7 +108,7 @@ async def get_responses_for_model(
     with get_session() as session:
         system_prompt_db_object = ensure_system_prompt(session, system_prompt)
         pending = get_pending_prompts(
-            session, provider, system_prompt_db_object, yta_only=YTA_ONLY
+            session, str(model), system_prompt_db_object, yta_only=YTA_ONLY
         )
 
         if llm.cfg.max_rows is not None:
@@ -115,23 +118,23 @@ async def get_responses_for_model(
             response = await llm.call_model(prompt.prompt, semaphore)
             if response != "ERROR" and not dry_run:
                 save_response(
-                    session, prompt, system_prompt_db_object, provider, response
+                    session, prompt, system_prompt_db_object, str(model), response
                 )
 
         tasks = [asyncio.create_task(process(prompt)) for prompt in pending]
         await run_tasks_with_progress(
             tasks,
-            f"{provider} prompts",
+            f"{model} prompts",
             position=progress_position,
         )
 
 
 async def get_responses_for_models(
-    providers: list[ModelProvider],
+    models: list[ModelName],
     system_prompt: SystemPrompt,
     dry_run: bool = False,
 ) -> None:
-    """Run response collection for multiple providers concurrently."""
+    """Run response collection for multiple models concurrently."""
 
     with get_session() as session:
         seed_prompts(session, DATASETS_DIR)
@@ -140,15 +143,15 @@ async def get_responses_for_models(
     tasks = [
         asyncio.create_task(
             get_responses_for_model(
-                provider,
-                build_llm(provider),
+                model,
+                build_llm(model),
                 system_prompt,
                 asyncio.Semaphore(MAX_WORKERS_PER_MODEL),
                 dry_run=dry_run,
                 progress_position=index,
             )
         )
-        for index, provider in enumerate(providers)
+        for index, model in enumerate(models)
     ]
     await asyncio.gather(*tasks)
 
@@ -156,7 +159,7 @@ async def get_responses_for_models(
 async def main() -> None:
     """Run the configured model collection job."""
 
-    await get_responses_for_models(PROVIDERS, SYSTEM_PROMPT, DRY_RUN)
+    await get_responses_for_models(MODELS, SYSTEM_PROMPT, DRY_RUN)
 
 
 if __name__ == "__main__":
