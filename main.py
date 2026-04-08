@@ -22,12 +22,8 @@ from pathlib import Path
 
 from tqdm import tqdm
 
-from db.crud import (
-    ensure_system_prompt,
-    get_pending_prompts,
-    save_response,
-    seed_prompts,
-)
+from db.crud import (ensure_system_prompt, get_pending_prompts, save_response,
+                     seed_prompts)
 from db.database import get_session, init_db
 from models import CLIENT_FUNCTIONS, LLM_Client, ModelProvider
 from prompts import SystemPrompt
@@ -35,13 +31,13 @@ from prompts import SystemPrompt
 #########################################################
 # CONFIG - Change these variables to change the experiment settings
 SYSTEM_PROMPT = SystemPrompt.BASE
-PROVIDER = ModelProvider.GEMINI
+PROVIDER = ModelProvider.CLAUDE
 MAX_RETRIES = 3
 MAX_WORKERS = 5
 LOGGING_LEVEL = logging.INFO
 
 # Or None to pull all. By default will ONLY generate responses for prompts that haven't been processed already
-MAX_RESPONSES = 15
+MAX_RESPONSES = None
 
 # Set to True to only make API calls and not append response records to database - used for testing AI connections
 DRY_RUN = False
