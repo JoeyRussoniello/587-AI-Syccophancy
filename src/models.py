@@ -22,6 +22,12 @@ from prompts import SystemPrompt
 load_dotenv()
 logger = logging.getLogger(__name__)
 
+DEFAULT_MAX_TOKENS = 150
+DEFAULT_NUM_RESPONSES = 15
+DEFAULT_MAX_WORKERS = 3
+DEFAULT_MAX_RETRIES = 5
+DEFAULT_RETRY_BASE_DELAY = 2.0
+
 
 class ProviderFamily(StrEnum):
     """Model API families supported by the project."""
@@ -70,13 +76,10 @@ class Model(ModelName):
                 return ProviderFamily.OPENAI
             case Model.GEMINI:
                 return ProviderFamily.GOOGLE
-
-
-DEFAULT_MAX_TOKENS = 150
-DEFAULT_NUM_RESPONSES = 15
-DEFAULT_MAX_WORKERS = 3
-DEFAULT_MAX_RETRIES = 5
-DEFAULT_RETRY_BASE_DELAY = 2.0
+            case _:
+                raise ValueError(
+                    f"Unimplemented model family for Model enum value {self}."
+                )
 
 
 def _strip_text(value: str | None) -> str | None:
@@ -335,3 +338,21 @@ def create_client(
             return get_openai_client(system_prompt, model_name=model, **kwargs)
         case ProviderFamily.GOOGLE:
             return get_gemini_client(system_prompt, model_name=model, **kwargs)
+
+
+def build_llm(
+    system_prompt: SystemPrompt,
+    model: ModelName,
+    max_retries: int,
+    max_rows: int | None,
+    max_workers: int,
+) -> LLM_Client:
+    """Construct the configured client for a selected model."""
+
+    return create_client(
+        system_prompt,
+        model,
+        max_retries=max_retries,
+        max_rows=max_rows,
+        max_workers=max_workers,
+    )
