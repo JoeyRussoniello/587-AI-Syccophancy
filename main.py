@@ -18,6 +18,7 @@ API keys are loaded from the .env file at the repo root:
 
 import asyncio
 import logging
+import sys
 from pathlib import Path
 
 from db.crud import (
@@ -33,13 +34,13 @@ from prompts import SystemPrompt
 #########################################################
 # CONFIG - Change these variables to change the experiment settings
 SYSTEM_PROMPT = SystemPrompt.BASE
-PROVIDER = ModelProvider.GEMINI
+PROVIDER = ModelProvider.OPEN_AI
 MAX_RETRIES = 3
-MAX_WORKERS = 5
+MAX_WORKERS = 10
 LOGGING_LEVEL = logging.INFO
 
 # Or None to pull all. By default will ONLY generate responses for prompts that haven't been processed already
-NUM_RESPONSES = 100
+MAX_RESPONSES = 500
 
 # Set to True to only make API calls and not append response records to database - used for testing AI connections
 DRY_RUN = False
@@ -50,13 +51,18 @@ YTA_ONLY = True
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(
-    format="%(asctime)s - %(levelname)s - %(message)s", level=LOGGING_LEVEL
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    level=LOGGING_LEVEL,
+    handlers=[
+        logging.FileHandler("app.log"),  # Writes to file
+        logging.StreamHandler(sys.stdout),  # Writes to stdout (default is stderr)
+    ],
 )
 client_fn = CLIENT_FUNCTIONS[PROVIDER]
 llm = client_fn(
     SYSTEM_PROMPT,
     max_retries=MAX_RETRIES,
-    max_rows=NUM_RESPONSES,
+    max_rows=MAX_RESPONSES,
     max_workers=MAX_WORKERS,
 )
 REPO_ROOT = Path(__file__).parent
