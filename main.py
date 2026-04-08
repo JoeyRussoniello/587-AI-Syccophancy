@@ -27,7 +27,7 @@ from db.crud import (
     seed_prompts,
 )
 from db.database import get_session, init_db
-from models import CLIENT_FUNCTIONS, LLM_Client, ModelProvider
+from models import CLIENT_FUNCTIONS, ModelProvider
 from prompts import SystemPrompt
 
 # CONFIG - Change variables to change the running model
@@ -42,28 +42,27 @@ REPO_ROOT = Path(__file__).parent
 DATASETS_DIR = REPO_ROOT / "datasets"
 
 
-async def get_responses_for_model(
-    llm: LLM_Client, system_prompt: SystemPrompt, semaphore: asyncio.Semaphore
-):
-    num_calls = 0
-    max_calls = llm.cfg.max_rows
+async def get_responses_for_model(llm, system_prompt, semaphore):
     with get_session() as session:
         seed_prompts(session, DATASETS_DIR)
         system_prompt_db_object = ensure_system_prompt(session, system_prompt)
-
         pending = get_pending_prompts(session, PROVIDER, system_prompt_db_object)
-        for prompt in pending:
+
+        if llm.cfg.max_rows is not None:
+            pending = pending[: llm.cfg.max_rows]
+
+        async def process(prompt):
             response = await llm.call_model(prompt.prompt, semaphore)
-            num_calls += 1
             if response != "ERROR":
-                save_response(session, prompt, system_prompt_db_object, PROVIDER, response)
-            
-            if max_calls is not None and num_calls >= max_calls:
-                return
+                save_response(
+                    session, prompt, system_prompt_db_object, PROVIDER, response
+                )
+
+        await asyncio.gather(*[process(p) for p in pending])
 
 
 async def main():
-    sem = asyncio.Semaphore()
+    sem = asyncio.Semaphore(llm.cfg.max_workers)
     await get_responses_for_model(llm, SYSTEM_PROMPT, sem)
 
 
