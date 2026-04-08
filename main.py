@@ -44,7 +44,7 @@ LOGGING_LEVEL = logging.INFO
 MAX_RESPONSES = 15
 
 # Set to True to only make API calls and not append response records to database - used for testing AI connections
-DRY_RUN = True
+DRY_RUN = False
 
 # Set to True to only get responses for 'YTA' prompts to get non-control group sycophancy rates.
 YTA_ONLY = False
