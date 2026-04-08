@@ -35,7 +35,7 @@ from prompts import SystemPrompt
 #########################################################
 # CONFIG - Change these variables to change the experiment settings
 SYSTEM_PROMPT = SystemPrompt.HONEST_ASSISTANT
-PROVIDERS = [ModelProvider.GEMINI]
+PROVIDERS = [ModelProvider.CLAUDE]
 MAX_RETRIES = 3
 MAX_WORKERS_PER_MODEL = 5
 LOGGING_LEVEL = logging.INFO
