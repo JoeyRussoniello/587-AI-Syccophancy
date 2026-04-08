@@ -35,19 +35,19 @@ from prompts import SystemPrompt
 #########################################################
 # CONFIG - Change these variables to change the experiment settings
 SYSTEM_PROMPT = SystemPrompt.HONEST_ASSISTANT
-PROVIDERS = [ModelProvider.OPEN_AI, ModelProvider.GEMINI]
+PROVIDERS = [ModelProvider.GEMINI]
 MAX_RETRIES = 3
-MAX_WORKERS_PER_MODEL = 2
+MAX_WORKERS_PER_MODEL = 5
 LOGGING_LEVEL = logging.INFO
 
 # Or None to pull all. By default will ONLY generate responses for prompts that haven't been processed already
-MAX_RESPONSES = 15
+MAX_RESPONSES = None
 
 # Set to True to only make API calls and not append response records to database - used for testing AI connections
 DRY_RUN = False
 
 # Set to True to only get responses for 'YTA' prompts to get non-control group sycophancy rates.
-YTA_ONLY = False
+YTA_ONLY = True
 #########################################################
 
 logger = logging.getLogger(__name__)
