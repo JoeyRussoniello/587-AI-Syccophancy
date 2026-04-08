@@ -3,3 +3,4 @@
   - Instead of `pip install -e` use `uv sync --all-groups`
   - Instead of `python -m unittest`, use `uv run pytest`
 - Prefer `pytest` to `unittest` for all test casese
+- Consult `resources` for motivation, project aim, similar works, and project scope
