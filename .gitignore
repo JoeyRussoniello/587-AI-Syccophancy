@@ -5,5 +5,7 @@ __pycache__/
 \venv
 
 *.egg-info
+*.db-journal
+
 .ruff_cache
 .mypy_cache
