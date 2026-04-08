@@ -6,7 +6,7 @@ import os
 from asyncio import Semaphore
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Callable, Protocol
+from typing import Any, Callable, Protocol
 
 import anthropic
 import openai
@@ -36,6 +36,26 @@ DEFAULT_MAX_RETRIES = 5
 DEFAULT_RETRY_BASE_DELAY = 2.0
 
 
+def _strip_text(value: str | None) -> str | None:
+    if not isinstance(value, str):
+        return None
+
+    stripped = value.strip()
+    return stripped or None
+
+
+def _first_anthropic_text_block(content: object) -> str | None:
+    if not isinstance(content, list):
+        return None
+
+    for block in content:
+        text = _strip_text(getattr(block, "text", None))
+        if text is not None:
+            return text
+
+    return None
+
+
 @dataclass
 class ModelConfig:
     required_key: str
@@ -51,7 +71,7 @@ class ModelConfig:
         if os.getenv(key) is None:
             raise EnvironmentError(f"Missing Required Key to initialize client {key}")
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.ensure_key()
 
 
@@ -65,7 +85,7 @@ class LLM_Client(Protocol):
 
     cfg: ModelConfig
 
-    def __init__(self, client: any, configuration: ModelConfig): ...
+    def __init__(self, client: Any, configuration: ModelConfig): ...
 
     async def _call_model_once(self, prompt: str) -> str | None: ...
 
@@ -100,7 +120,11 @@ class AnthropicClient(LLM_Client):
                 system=self.cfg.system_prompt,
                 messages=[{"role": "user", "content": prompt}],
             )
-            return msg.content[0].text.strip()
+            text = _first_anthropic_text_block(msg.content)
+            if text is None:
+                logger.error("Claude response did not include a text block")
+                return "ERROR"
+            return text
         except anthropic.RateLimitError:
             return None
         except anthropic.APIStatusError as e:
@@ -128,7 +152,11 @@ class OpenAIClient(LLM_Client):
                     {"role": "user", "content": prompt},
                 ],
             )
-            return resp.choices[0].message.content.strip()
+            content = _strip_text(resp.choices[0].message.content)
+            if content is None:
+                logger.error("OpenAI response did not include message content")
+                return "ERROR"
+            return content
         except openai.RateLimitError:
             return None
         except openai.APIStatusError as e:
@@ -156,7 +184,11 @@ class GeminiClient(LLM_Client):
                     max_output_tokens=len(prompt) + self.cfg.max_tokens,
                 ),
             )
-            return resp.text.strip()
+            text = _strip_text(resp.text)
+            if text is None:
+                logger.error("Gemini response did not include text output")
+                return "ERROR"
+            return text
         except genai_errors.APIError as e:
             if e.code in (429, 503):
                 return None
