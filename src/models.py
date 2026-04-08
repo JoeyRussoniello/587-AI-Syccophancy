@@ -222,7 +222,7 @@ class OpenAIClient(LLM_Client):
         try:
             resp = await self.client.chat.completions.create(
                 model=self.cfg.model_name,
-                max_completion_tokens=len(prompt) + self.cfg.max_tokens,
+                max_completion_tokens=self.cfg.max_tokens,
                 messages=[
                     {"role": "system", "content": self.cfg.system_prompt},
                     {"role": "user", "content": prompt},
