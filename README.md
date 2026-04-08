@@ -50,9 +50,8 @@ Tables and key columns (PK = primary key, FK = foreign key):
 ```
 
 ## How to run
-- Configure model output settings (max number of token, retry strategy) in the configuration section of `src/models.py`
-- Configure `main.py` for the desired LLM (Claude, OpenAI, or Gemini)
+- Configure constants `main.py` for the desired LLM (Claude, OpenAI, or Gemini), number of responses, token limits, and retry strategies
 - Use uv to run scripts and tests (project preference):
   - `uv run main.py`
-  - `uv run pytest`
+  - `uv run pytest` (tests not implemented yet)
 - See `src/` for experiment entrypoints and `src/db` for database schemas and CRUD operations
