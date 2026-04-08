@@ -37,8 +37,8 @@ PROVIDER = ModelProvider.GEMINI
 MAX_RETRIES = 3
 NUM_RESPONSES = 1  # Or None to pull all. By default will ONLY generate responses for prompts that haven't been processed already
 MAX_WORKERS = 1
-DRY_RUN = True     # Set to True to only make API calls and not append response records to database - used for testing AI connections
-LOGGING_LEVEL = logging.DEBUG 
+DRY_RUN = True  # Set to True to only make API calls and not append response records to database - used for testing AI connections
+LOGGING_LEVEL = logging.DEBUG
 #########################################################
 
 logger = logging.getLogger(__name__)
@@ -56,7 +56,12 @@ REPO_ROOT = Path(__file__).parent
 DATASETS_DIR = REPO_ROOT / "datasets"
 
 
-async def get_responses_for_model(llm: LLM_Client, system_prompt: SystemPrompt, semaphore: asyncio.Semaphore, dry_run: bool = False):
+async def get_responses_for_model(
+    llm: LLM_Client,
+    system_prompt: SystemPrompt,
+    semaphore: asyncio.Semaphore,
+    dry_run: bool = False,
+):
     with get_session() as session:
         seed_prompts(session, DATASETS_DIR)
         system_prompt_db_object = ensure_system_prompt(session, system_prompt)
