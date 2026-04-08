@@ -30,14 +30,24 @@ from db.database import get_session, init_db
 from models import CLIENT_FUNCTIONS, ModelProvider
 from prompts import SystemPrompt
 
-# CONFIG - Change variables to change the running model
+#########################################################
+# CONFIG - Change these variables to change the experiment settings
 SYSTEM_PROMPT = SystemPrompt.BASE
 PROVIDER = ModelProvider.GEMINI
+MAX_RETRIES = 3
+NUM_RESPONSES = 1 # Or None to pull all. By default will ONLY generate responses for prompts that haven't been processed already
+MAX_WORKERS = 1
+#########################################################
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s", level = logging.INFO)
 client_fn = CLIENT_FUNCTIONS[PROVIDER]
-llm = client_fn(SYSTEM_PROMPT)
+llm = client_fn(
+    SYSTEM_PROMPT,
+    max_retries = MAX_RETRIES,
+    max_rows = NUM_RESPONSES,
+    max_workers = MAX_WORKERS
+)
 REPO_ROOT = Path(__file__).parent
 DATASETS_DIR = REPO_ROOT / "datasets"
 
