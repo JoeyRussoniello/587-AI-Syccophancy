@@ -60,6 +60,7 @@ def get_pending_prompts(
     session: Session,
     model: ModelProvider,
     system_prompt: SystemPrompt,
+    yta_only: bool = False,
 ) -> list[Prompt]:
     """Return prompts that do NOT yet have a response for this model + system prompt."""
     already_done = (
@@ -70,7 +71,10 @@ def get_pending_prompts(
         )
         .scalar_subquery()
     )
-    return session.query(Prompt).filter(~Prompt.prompt_id.in_(already_done)).all()
+    unprocessed = session.query(Prompt).filter(~Prompt.prompt_id.in_(already_done))
+    if yta_only:
+        unprocessed = unprocessed.filter(Prompt.YTA_NTA == "YTA")
+    return unprocessed.all()
 
 
 def _extract_label(response_text: str) -> str | None:
