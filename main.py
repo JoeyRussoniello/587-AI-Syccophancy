@@ -35,10 +35,10 @@ from prompts import SystemPrompt
 SYSTEM_PROMPT = SystemPrompt.BASE
 PROVIDER = ModelProvider.GEMINI
 MAX_RETRIES = 3
-NUM_RESPONSES = 1  # Or None to pull all. By default will ONLY generate responses for prompts that haven't been processed already
-MAX_WORKERS = 1
-DRY_RUN = True  # Set to True to only make API calls and not append response records to database - used for testing AI connections
-LOGGING_LEVEL = logging.DEBUG
+NUM_RESPONSES = 100  # Or None to pull all. By default will ONLY generate responses for prompts that haven't been processed already
+MAX_WORKERS = 5
+DRY_RUN = False  # Set to True to only make API calls and not append response records to database - used for testing AI connections
+LOGGING_LEVEL = logging.INFO
 #########################################################
 
 logger = logging.getLogger(__name__)
