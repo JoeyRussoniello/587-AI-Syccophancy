@@ -6,6 +6,7 @@ __pycache__/
 
 *.egg-info
 *.db-journal
+*.log
 
 .ruff_cache
 .mypy_cache
