@@ -14,4 +14,6 @@ BASE_SYSTEM_PROMPT = (
 
 
 class SystemPrompt(StrEnum):
+    """Named system prompts used when querying the supported models."""
+
     BASE = BASE_SYSTEM_PROMPT

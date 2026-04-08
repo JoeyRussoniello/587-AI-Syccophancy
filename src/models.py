@@ -24,6 +24,8 @@ logger = logging.getLogger(__name__)
 
 
 class ModelProvider(StrEnum):
+    """Supported model identifiers for each provider used in the project."""
+
     CLAUDE = "claude-haiku-4-5-20251001"
     OPEN_AI = "gpt-4.1-mini"
     GEMINI = "gemini-2.5-flash"
@@ -58,6 +60,8 @@ def _first_anthropic_text_block(content: object) -> str | None:
 
 @dataclass
 class ModelConfig:
+    """Runtime configuration shared by all model client wrappers."""
+
     required_key: str
     system_prompt: SystemPrompt
     max_tokens: int = DEFAULT_MAX_TOKENS
@@ -67,6 +71,8 @@ class ModelConfig:
     retry_base_delay: float = DEFAULT_RETRY_BASE_DELAY
 
     def ensure_key(self) -> None:
+        """Validate that the required environment variable is present."""
+
         key = self.required_key
         if os.getenv(key) is None:
             raise EnvironmentError(f"Missing Required Key to initialize client {key}")
@@ -103,6 +109,23 @@ class LLM_Client(Protocol):
         return "ERROR"
 
     async def call_model(self, prompt: str, semaphore: Semaphore) -> str:
+        """Run a prompt through the model with concurrency control and retries.
+
+        This is the main public entry point for model execution in the module.
+        It acquires the provided semaphore before calling the internal retry
+        wrapper, ensuring the caller can bound concurrent in-flight requests
+        across many prompts.
+
+        Args:
+            prompt: The user prompt text to send to the configured model.
+            semaphore: An asyncio semaphore used to limit how many model calls
+                can run concurrently.
+
+        Returns:
+            The final model response text. Returns "ERROR" when all retry
+            attempts fail or a non-retryable API error occurs.
+        """
+
         async with semaphore:
             msg = await self._call_model(prompt)
             logger.debug("Got response from model:\n%s", msg)
@@ -110,6 +133,8 @@ class LLM_Client(Protocol):
 
 
 class AnthropicClient(LLM_Client):
+    """Anthropic implementation of the shared LLM client protocol."""
+
     def __init__(self, client: AsyncAnthropic, configuration: ModelConfig):
         self.client = client
         self.cfg = configuration
@@ -140,6 +165,8 @@ class AnthropicClient(LLM_Client):
 
 
 class OpenAIClient(LLM_Client):
+    """OpenAI implementation of the shared LLM client protocol."""
+
     def __init__(
         self,
         client: AsyncOpenAI,
@@ -178,6 +205,8 @@ class OpenAIClient(LLM_Client):
 
 
 class GeminiClient(LLM_Client):
+    """Google GenAI implementation of the shared LLM client protocol."""
+
     def __init__(self, client: genai.Client, configuration: ModelConfig):
         self.client = client
         self.cfg = configuration
@@ -208,6 +237,8 @@ class GeminiClient(LLM_Client):
 
 
 def get_anthropic_client(system_prompt: SystemPrompt, **kwargs) -> AnthropicClient:
+    """Build the default Anthropic client wrapper for a given system prompt."""
+
     cfg = ModelConfig(
         required_key="ANTHROPIC_API_KEY", system_prompt=system_prompt, **kwargs
     )
@@ -219,6 +250,8 @@ def get_openai_client(
     provider: ModelProvider = ModelProvider.OPEN_AI,
     **kwargs,
 ) -> OpenAIClient:
+    """Build the default OpenAI client wrapper for a given system prompt."""
+
     cfg = ModelConfig(
         required_key="OPENAI_API_KEY", system_prompt=system_prompt, **kwargs
     )
@@ -226,6 +259,8 @@ def get_openai_client(
 
 
 def get_gemini_client(system_prompt: SystemPrompt, **kwargs) -> GeminiClient:
+    """Build the default Gemini client wrapper for a given system prompt."""
+
     cfg = ModelConfig(
         required_key="GOOGLE_API_KEY", system_prompt=system_prompt, **kwargs
     )

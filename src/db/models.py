@@ -3,10 +3,14 @@ from sqlalchemy.orm import DeclarativeBase, relationship
 
 
 class Base(DeclarativeBase):
+    """Base declarative class for all ORM models in the project."""
+
     pass
 
 
 class Prompt(Base):
+    """Stored prompt text and its ground-truth AITA label metadata."""
+
     __tablename__ = "prompts"
 
     prompt_id = Column(Integer, primary_key=True, autoincrement=True)
@@ -19,6 +23,8 @@ class Prompt(Base):
 
 
 class SystemPrompt(Base):
+    """Normalized system prompt values referenced by model responses."""
+
     __tablename__ = "system_prompts"
 
     system_prompt_id = Column(Integer, primary_key=True, autoincrement=True)
@@ -28,6 +34,8 @@ class SystemPrompt(Base):
 
 
 class LLMResponse(Base):
+    """A model response tied to a prompt, system prompt, and extracted label."""
+
     __tablename__ = "llm_responses"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
