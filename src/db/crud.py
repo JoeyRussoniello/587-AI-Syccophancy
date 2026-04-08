@@ -46,11 +46,14 @@ def seed_prompts(session: Session, datasets_dir: Path) -> int:
 
 def ensure_system_prompt(session: Session, text: SystemPromptEnum) -> SystemPrompt:
     """Return the SystemPrompt for `text`, creating it if necessary."""
-    row = session.query(SystemPrompt).filter_by(system_prompt=text).first()
+    row = session.query(SystemPrompt).filter_by(system_prompt_name=text.name).first()
     if row is not None:
+        if row.system_prompt != str(text):
+            row.system_prompt = str(text)
+            session.flush()
         return row
 
-    row = SystemPrompt(system_prompt=text)
+    row = SystemPrompt(system_prompt_name=text.name, system_prompt=str(text))
     session.add(row)
     session.flush()
     return row
