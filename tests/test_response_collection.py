@@ -22,7 +22,15 @@ def test_get_responses_for_models_uses_one_semaphore_per_provider(
         Model.GEMINI,
     ]
     llm_by_provider = {str(model): object() for model in models}
-    calls: list[tuple[Model, object, response_collection.ResponseCollectionConfig, asyncio.Semaphore, int]] = []
+    calls: list[
+        tuple[
+            Model,
+            object,
+            response_collection.ResponseCollectionConfig,
+            asyncio.Semaphore,
+            int,
+        ]
+    ] = []
     config = response_collection.ResponseCollectionConfig(
         system_prompt=SystemPrompt.BASE,
         datasets_dir=Path("datasets"),
@@ -47,7 +55,9 @@ def test_get_responses_for_models_uses_one_semaphore_per_provider(
     monkeypatch.setattr(
         response_collection,
         "build_llm",
-        lambda system_prompt, model, max_retries, max_rows, max_workers: llm_by_provider[str(model)],
+        lambda system_prompt, model, max_retries, max_rows, max_workers: (
+            llm_by_provider[str(model)]
+        ),
     )
 
     async def fake_get_responses_for_model(
