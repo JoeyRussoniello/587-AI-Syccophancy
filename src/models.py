@@ -160,22 +160,22 @@ class GeminiClient(LLM_Client):
             return "ERROR"
 
 
-def get_anthropic_client(system_prompt: SystemPrompt) -> AnthropicClient:
-    cfg = ModelConfig(required_key="ANTHROPIC_API_KEY", system_prompt=system_prompt)
+def get_anthropic_client(system_prompt: SystemPrompt, **kwargs) -> AnthropicClient:
+    cfg = ModelConfig(required_key="ANTHROPIC_API_KEY", system_prompt=system_prompt, **kwargs)
     return AnthropicClient(AsyncAnthropic(), cfg)
 
 
-def get_openai_client(system_prompt: SystemPrompt) -> OpenAIClient:
-    cfg = ModelConfig(required_key="OPENAI_API_KEY", system_prompt=system_prompt)
+def get_openai_client(system_prompt: SystemPrompt, **kwargs) -> OpenAIClient:
+    cfg = ModelConfig(required_key="OPENAI_API_KEY", system_prompt=system_prompt, **kwargs)
     return OpenAIClient(AsyncOpenAI(), cfg)
 
 
-def get_gemini_client(system_prompt: SystemPrompt) -> GeminiClient:
-    cfg = ModelConfig(required_key="GOOGLE_API_KEY", system_prompt=system_prompt)
+def get_gemini_client(system_prompt: SystemPrompt, **kwargs) -> GeminiClient:
+    cfg = ModelConfig(required_key="GOOGLE_API_KEY", system_prompt=system_prompt, **kwargs)
     client = genai.Client()
     return GeminiClient(client, cfg)
 
-ClientFn = Callable[[SystemPrompt], LLM_Client]
+ClientFn = Callable[..., LLM_Client]
 
 CLIENT_FUNCTIONS: dict[ModelProvider, ClientFn]= {
     ModelProvider.CLAUDE: get_anthropic_client,
