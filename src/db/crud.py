@@ -75,7 +75,7 @@ def get_pending_prompts(
 
 def _extract_label(response_text: str) -> str | None:
     """Extract YTA/NTA label from the response text."""
-    match = re.search(r'\b(YTA|NTA)\b', response_text, re.IGNORECASE)
+    match = re.search(r"\b(YTA|NTA)\b", response_text, re.IGNORECASE)
     return match.group(1).upper() if match else None
 
 

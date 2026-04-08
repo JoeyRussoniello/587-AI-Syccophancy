@@ -35,18 +35,20 @@ from prompts import SystemPrompt
 SYSTEM_PROMPT = SystemPrompt.BASE
 PROVIDER = ModelProvider.GEMINI
 MAX_RETRIES = 3
-NUM_RESPONSES = 1 # Or None to pull all. By default will ONLY generate responses for prompts that haven't been processed already
+NUM_RESPONSES = 1  # Or None to pull all. By default will ONLY generate responses for prompts that haven't been processed already
 MAX_WORKERS = 1
 #########################################################
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s", level = logging.INFO)
+logging.basicConfig(
+    format="%(asctime)s - %(levelname)s - %(message)s", level=logging.INFO
+)
 client_fn = CLIENT_FUNCTIONS[PROVIDER]
 llm = client_fn(
     SYSTEM_PROMPT,
-    max_retries = MAX_RETRIES,
-    max_rows = NUM_RESPONSES,
-    max_workers = MAX_WORKERS
+    max_retries=MAX_RETRIES,
+    max_rows=NUM_RESPONSES,
+    max_workers=MAX_WORKERS,
 )
 REPO_ROOT = Path(__file__).parent
 DATASETS_DIR = REPO_ROOT / "datasets"

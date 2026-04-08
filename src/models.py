@@ -28,11 +28,13 @@ class ModelProvider(StrEnum):
     OPEN_AI = "gpt-4o-mini"
     GEMINI = "gemini-2.5-flash"
 
+
 DEFAULT_MAX_TOKENS = 150
 DEFAULT_NUM_RESPONSES = 15
 DEFAULT_MAX_WORKERS = 3
 DEFAULT_MAX_RETRIES = 5
 DEFAULT_RETRY_BASE_DELAY = 2.0
+
 
 @dataclass
 class ModelConfig:
@@ -71,7 +73,7 @@ class LLM_Client(Protocol):
         delay = self.cfg.retry_base_delay
         for attempt in range(self.cfg.max_retries):
             if attempt >= 1:
-                logging.debug('Attempt %d to _call_model_once.', attempt + 1)
+                logging.debug("Attempt %d to _call_model_once.", attempt + 1)
             result = await self._call_model_once(prompt)
             if result is not None:
                 return result
@@ -166,23 +168,30 @@ class GeminiClient(LLM_Client):
 
 
 def get_anthropic_client(system_prompt: SystemPrompt, **kwargs) -> AnthropicClient:
-    cfg = ModelConfig(required_key="ANTHROPIC_API_KEY", system_prompt=system_prompt, **kwargs)
+    cfg = ModelConfig(
+        required_key="ANTHROPIC_API_KEY", system_prompt=system_prompt, **kwargs
+    )
     return AnthropicClient(AsyncAnthropic(), cfg)
 
 
 def get_openai_client(system_prompt: SystemPrompt, **kwargs) -> OpenAIClient:
-    cfg = ModelConfig(required_key="OPENAI_API_KEY", system_prompt=system_prompt, **kwargs)
+    cfg = ModelConfig(
+        required_key="OPENAI_API_KEY", system_prompt=system_prompt, **kwargs
+    )
     return OpenAIClient(AsyncOpenAI(), cfg)
 
 
 def get_gemini_client(system_prompt: SystemPrompt, **kwargs) -> GeminiClient:
-    cfg = ModelConfig(required_key="GOOGLE_API_KEY", system_prompt=system_prompt, **kwargs)
+    cfg = ModelConfig(
+        required_key="GOOGLE_API_KEY", system_prompt=system_prompt, **kwargs
+    )
     client = genai.Client()
     return GeminiClient(client, cfg)
 
+
 ClientFn = Callable[..., LLM_Client]
 
-CLIENT_FUNCTIONS: dict[ModelProvider, ClientFn]= {
+CLIENT_FUNCTIONS: dict[ModelProvider, ClientFn] = {
     ModelProvider.CLAUDE: get_anthropic_client,
     ModelProvider.OPEN_AI: get_openai_client,
     ModelProvider.GEMINI: get_gemini_client,
