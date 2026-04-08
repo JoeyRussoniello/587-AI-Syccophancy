@@ -22,8 +22,12 @@ from pathlib import Path
 
 from tqdm import tqdm
 
-from db.crud import (ensure_system_prompt, get_pending_prompts, save_response,
-                     seed_prompts)
+from db.crud import (
+    ensure_system_prompt,
+    get_pending_prompts,
+    save_response,
+    seed_prompts,
+)
 from db.database import get_session, init_db
 from models import CLIENT_FUNCTIONS, LLM_Client, ModelProvider
 from prompts import SystemPrompt
