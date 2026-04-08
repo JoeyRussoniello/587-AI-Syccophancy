@@ -27,7 +27,7 @@ from db.crud import (
     seed_prompts,
 )
 from db.database import get_session, init_db
-from models import CLIENT_FUNCTIONS, ModelProvider
+from models import CLIENT_FUNCTIONS, LLM_Client, ModelProvider
 from prompts import SystemPrompt
 
 #########################################################
@@ -37,11 +37,13 @@ PROVIDER = ModelProvider.GEMINI
 MAX_RETRIES = 3
 NUM_RESPONSES = 1  # Or None to pull all. By default will ONLY generate responses for prompts that haven't been processed already
 MAX_WORKERS = 1
+DRY_RUN = True     # Set to True to only make API calls and not append response records to database - used for testing AI connections
+LOGGING_LEVEL = logging.DEBUG 
 #########################################################
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(
-    format="%(asctime)s - %(levelname)s - %(message)s", level=logging.INFO
+    format="%(asctime)s - %(levelname)s - %(message)s", level=LOGGING_LEVEL
 )
 client_fn = CLIENT_FUNCTIONS[PROVIDER]
 llm = client_fn(
@@ -54,7 +56,7 @@ REPO_ROOT = Path(__file__).parent
 DATASETS_DIR = REPO_ROOT / "datasets"
 
 
-async def get_responses_for_model(llm, system_prompt, semaphore):
+async def get_responses_for_model(llm: LLM_Client, system_prompt: SystemPrompt, semaphore: asyncio.Semaphore, dry_run: bool = False):
     with get_session() as session:
         seed_prompts(session, DATASETS_DIR)
         system_prompt_db_object = ensure_system_prompt(session, system_prompt)
@@ -65,7 +67,7 @@ async def get_responses_for_model(llm, system_prompt, semaphore):
 
         async def process(prompt):
             response = await llm.call_model(prompt.prompt, semaphore)
-            if response != "ERROR":
+            if response != "ERROR" and not dry_run:
                 save_response(
                     session, prompt, system_prompt_db_object, PROVIDER, response
                 )
@@ -75,7 +77,7 @@ async def get_responses_for_model(llm, system_prompt, semaphore):
 
 async def main():
     sem = asyncio.Semaphore(llm.cfg.max_workers)
-    await get_responses_for_model(llm, SYSTEM_PROMPT, sem)
+    await get_responses_for_model(llm, SYSTEM_PROMPT, sem, DRY_RUN)
 
 
 if __name__ == "__main__":
