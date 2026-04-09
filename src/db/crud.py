@@ -118,24 +118,24 @@ def save_response(
 
 def save_responses_bulk(
     session: Session,
-    entries: list[tuple[Prompt, str]],
-    system_prompt: SystemPrompt,
+    entries: list[tuple[int, str]],
+    system_prompt_id: int,
     model: str,
 ) -> list[LLMResponse]:
     """Insert multiple LLM response rows in a single flush.
 
-    `entries` is a list of (prompt, response_text) pairs.
+    `entries` is a list of (prompt_id, response_text) pairs.
     Returns the list of inserted LLMResponse objects.
     """
     rows = [
         LLMResponse(
-            prompt_id=prompt.prompt_id,
-            system_prompt_id=system_prompt.system_prompt_id,
+            prompt_id=prompt_id,
+            system_prompt_id=system_prompt_id,
             model=model,
             llm_label=_extract_label(response_text),
             response=response_text,
         )
-        for prompt, response_text in entries
+        for prompt_id, response_text in entries
     ]
     session.add_all(rows)
     session.flush()
@@ -143,6 +143,6 @@ def save_responses_bulk(
         "Saved %d responses for model %s and system prompt %s",
         len(rows),
         model,
-        system_prompt.system_prompt_name,
+        system_prompt_id,
     )
     return rows
