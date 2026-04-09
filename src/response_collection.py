@@ -64,6 +64,7 @@ async def get_responses_for_model(
 
     with get_session() as session:
         system_prompt_db_object = ensure_system_prompt(session, config.system_prompt)
+        system_prompt_id = system_prompt_db_object.system_prompt_id
         pending = get_pending_prompts(
             session, str(model), system_prompt_db_object, yta_only=config.yta_only
         )
@@ -74,24 +75,23 @@ async def get_responses_for_model(
         if llm.cfg.max_rows is not None:
             pending_prompts = pending_prompts[: llm.cfg.max_rows]
 
-        collected: list[tuple] = []
+    collected: list[tuple] = []
 
-        async def process(prompt) -> None:
-            response = await llm.call_model(prompt.prompt_text, semaphore)
-            if response != "ERROR":
-                collected.append((prompt, response))
+    async def process(prompt) -> None:
+        response = await llm.call_model(prompt.prompt_text, semaphore)
+        if response != "ERROR":
+            collected.append((prompt.prompt_id, response))
 
-        tasks = [asyncio.create_task(process(prompt)) for prompt in pending_prompts]
-        await run_tasks_with_progress(
-            tasks,
-            f"{model} prompts",
-            position=progress_position,
-        )
+    tasks = [asyncio.create_task(process(prompt)) for prompt in pending_prompts]
+    await run_tasks_with_progress(
+        tasks,
+        f"{model} prompts",
+        position=progress_position,
+    )
 
-        if not config.dry_run and collected:
-            save_responses_bulk(
-                session, collected, system_prompt_db_object, str(model)
-            )
+    if not config.dry_run and collected:
+        with get_session() as session:
+            save_responses_bulk(session, collected, system_prompt_id, str(model))
 
 
 async def get_responses_for_models(
