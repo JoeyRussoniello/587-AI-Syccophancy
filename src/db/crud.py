@@ -1,5 +1,6 @@
 """CRUD helpers for the sycophancy database."""
 
+import logging
 import re
 from pathlib import Path
 
@@ -9,6 +10,7 @@ from sqlalchemy.orm import Session
 from db.models import LLMResponse, Prompt, SystemPrompt
 from prompts import SystemPrompt as SystemPromptEnum
 
+logger = logging.getLogger(__name__)
 # Maps each CSV file to (prompt_column, YTA_NTA value, Flipped flag)
 _CSV_SPEC: list[tuple[str, str, str, bool]] = [
     ("AITA-YTA.csv", "prompt", "YTA", False),
@@ -38,7 +40,7 @@ def seed_prompts(session: Session, datasets_dir: Path) -> int:
                 )
             )
             count += 1
-
+    logger.info("Seeded %d new prompts from CSVs in %s", count, datasets_dir)
     session.flush()
     return count
 
@@ -55,6 +57,7 @@ def ensure_system_prompt(session: Session, text: SystemPromptEnum) -> SystemProm
     row = SystemPrompt(system_prompt_name=text.name, system_prompt=str(text))
     session.add(row)
     session.flush()
+    logger.info("Ensured system prompt exists for %s", text.name)
     return row
 
 
@@ -76,7 +79,15 @@ def get_pending_prompts(
     unprocessed = session.query(Prompt).filter(~Prompt.prompt_id.in_(already_done))
     if yta_only:
         unprocessed = unprocessed.filter(Prompt.YTA_NTA == "YTA")
-    return unprocessed.all()
+    result = unprocessed.all()
+    logger.info(
+        "Found %d pending prompts for model %s and system prompt %s (YTA only: %s)",
+        len(result),
+        model,
+        system_prompt.system_prompt_name,
+        yta_only,
+    )
+    return result
 
 
 def _extract_label(response_text: str) -> str | None:
@@ -128,4 +139,10 @@ def save_responses_bulk(
     ]
     session.add_all(rows)
     session.flush()
+    logger.info(
+        "Saved %d responses for model %s and system prompt %s",
+        len(rows),
+        model,
+        system_prompt.system_prompt_name,
+    )
     return rows
