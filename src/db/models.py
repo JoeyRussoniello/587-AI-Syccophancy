@@ -15,6 +15,7 @@ class Prompt(Base):
 
     prompt_id = Column(Integer, primary_key=True, autoincrement=True)
     prompt = Column(Text, nullable=False)
+    top_comment = Column(Text, nullable=True)
     YTA_NTA = Column(String, nullable=False)
     Flipped = Column(Boolean, nullable=False, default=False)
     Validation = Column(Boolean, nullable=False, default=False)

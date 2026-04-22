@@ -2,21 +2,56 @@
 
 import logging
 import re
+from functools import wraps
 from pathlib import Path
+from typing import Callable, Concatenate, ParamSpec, TypeVar
 
 import pandas as pd
+from sqlalchemy import inspect, text
 from sqlalchemy.orm import Session
 
+from db.database import get_session
 from db.models import LLMResponse, Prompt, SystemPrompt
 from prompts import SystemPrompt as SystemPromptEnum
 
 logger = logging.getLogger(__name__)
-# Maps each CSV file to (prompt_column, YTA_NTA value, Flipped flag)
-_CSV_SPEC: list[tuple[str, str, str, bool]] = [
-    ("AITA-YTA.csv", "prompt", "YTA", False),
-    ("AITA-NTA-OG.csv", "original_post", "NTA", False),
-    ("AITA-NTA-FLIP.csv", "flipped_story", "NTA", True),
+# Maps each CSV file to (prompt_column, YTA_NTA value, Flipped flag, top_comment_column|None)
+_CSV_SPEC: list[tuple[str, str, str, bool, str | None]] = [
+    ("AITA-YTA.csv", "prompt", "YTA", False, "top_comment"),
+    ("AITA-NTA-OG.csv", "original_post", "NTA", False, None),
+    ("AITA-NTA-FLIP.csv", "flipped_story", "NTA", True, None),
 ]
+
+
+def migrate_add_top_comment(session: Session, datasets_dir: Path) -> None:
+    """Add the top_comment column to prompts and backfill from AITA-YTA.csv.
+
+    Safe to call repeatedly -- skips rows that already have a top_comment.
+    """
+    columns = [c["name"] for c in inspect(session.bind).get_columns("prompts")]
+    if "top_comment" not in columns:
+        session.execute(text("ALTER TABLE prompts ADD COLUMN top_comment TEXT"))
+        logger.info("Added top_comment column to prompts table")
+
+    # Build a lookup from prompt text -> top_comment (normalize line endings)
+    df = pd.read_csv(datasets_dir / "AITA-YTA.csv", index_col=0)
+    comment_by_prompt = {
+        p.replace("\r\n", "\n"): c
+        for p, c in zip(df["prompt"], df["top_comment"])
+    }
+
+    # Backfill YTA rows that still have a NULL top_comment
+    rows = session.query(Prompt).filter(
+        Prompt.YTA_NTA == "YTA", Prompt.top_comment.is_(None)
+    ).all()
+    count = 0
+    for prompt in rows:
+        comment = comment_by_prompt.get(prompt.prompt.replace("\r\n", "\n"))
+        if comment is not None:
+            prompt.top_comment = comment
+            count += 1
+    session.flush()
+    logger.info("Backfilled top_comment for %d YTA prompts", count)
 
 
 def seed_prompts(session: Session, datasets_dir: Path) -> int:
@@ -28,12 +63,13 @@ def seed_prompts(session: Session, datasets_dir: Path) -> int:
         return 0
 
     count = 0
-    for filename, col, yta_nta, flipped in _CSV_SPEC:
+    for filename, col, yta_nta, flipped, top_comment_col in _CSV_SPEC:
         df = pd.read_csv(datasets_dir / filename, index_col=0)
-        for text in df[col].dropna():
+        for _, row in df.dropna(subset=[col]).iterrows():
             session.add(
                 Prompt(
-                    prompt=text,
+                    prompt=row[col],
+                    top_comment=row.get(top_comment_col) if top_comment_col else None,
                     YTA_NTA=yta_nta,
                     Flipped=flipped,
                     Validation=False,
@@ -146,3 +182,35 @@ def save_responses_bulk(
         system_prompt_id,
     )
     return rows
+
+
+# Arbitrary input and output parameter types for the decorator
+R = TypeVar("R")
+P = ParamSpec("P")
+
+
+def contained_db_function(func: Callable[Concatenate[Session, P], R]) -> Callable[P, R]:
+    """Decorator to wrap functions that need a short-lived database session"""
+
+    @wraps(func)
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+        with get_session() as session:
+            return func(session, *args, **kwargs)
+
+    return wrapper
+
+
+@contained_db_function
+def get_all_prompts(session: Session) -> list[dict]:
+    prompts = session.query(Prompt).all()
+    return [
+        {
+            "prompt_id": p.prompt_id,
+            "prompt": p.prompt,
+            "top_comment": p.top_comment,
+            "YTA_NTA": p.YTA_NTA,
+            "Flipped": p.Flipped,
+            "Validation": p.Validation,
+        }
+        for p in prompts
+    ]
