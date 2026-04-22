@@ -225,7 +225,7 @@ def get_all_responses(session: Session) -> pd.DataFrame:
     return pd.DataFrame(
         [
             {
-                "response_id": r.response_id,
+                "response_id": r.id,
                 "prompt_id": r.prompt_id,
                 "system_prompt_id": r.system_prompt_id,
                 "model": r.model,
@@ -249,4 +249,14 @@ def get_all_system_prompts(session: Session) -> pd.DataFrame:
             }
             for sp in system_prompts
         ]
+    )
+
+
+if __name__ == "__main__":
+    sys_prompts = get_all_system_prompts()
+    prompts = get_all_prompts()
+    responses = get_all_responses()
+
+    print(
+        f"Got {len(sys_prompts)} system prompts, {len(prompts)} prompts, and {len(responses)} responses"
     )
