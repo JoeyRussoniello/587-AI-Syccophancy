@@ -36,14 +36,15 @@ def migrate_add_top_comment(session: Session, datasets_dir: Path) -> None:
     # Build a lookup from prompt text -> top_comment (normalize line endings)
     df = pd.read_csv(datasets_dir / "AITA-YTA.csv", index_col=0)
     comment_by_prompt = {
-        p.replace("\r\n", "\n"): c
-        for p, c in zip(df["prompt"], df["top_comment"])
+        p.replace("\r\n", "\n"): c for p, c in zip(df["prompt"], df["top_comment"])
     }
 
     # Backfill YTA rows that still have a NULL top_comment
-    rows = session.query(Prompt).filter(
-        Prompt.YTA_NTA == "YTA", Prompt.top_comment.is_(None)
-    ).all()
+    rows = (
+        session.query(Prompt)
+        .filter(Prompt.YTA_NTA == "YTA", Prompt.top_comment.is_(None))
+        .all()
+    )
     count = 0
     for prompt in rows:
         comment = comment_by_prompt.get(prompt.prompt.replace("\r\n", "\n"))
@@ -201,16 +202,51 @@ def contained_db_function(func: Callable[Concatenate[Session, P], R]) -> Callabl
 
 
 @contained_db_function
-def get_all_prompts(session: Session) -> list[dict]:
+def get_all_prompts(session: Session) -> pd.DataFrame:
     prompts = session.query(Prompt).all()
-    return [
-        {
-            "prompt_id": p.prompt_id,
-            "prompt": p.prompt,
-            "top_comment": p.top_comment,
-            "YTA_NTA": p.YTA_NTA,
-            "Flipped": p.Flipped,
-            "Validation": p.Validation,
-        }
-        for p in prompts
-    ]
+    return pd.DataFrame(
+        [
+            {
+                "prompt_id": p.prompt_id,
+                "prompt": p.prompt,
+                "top_comment": p.top_comment,
+                "YTA_NTA": p.YTA_NTA,
+                "Flipped": p.Flipped,
+                "Validation": p.Validation,
+            }
+            for p in prompts
+        ]
+    )
+
+
+@contained_db_function
+def get_all_responses(session: Session) -> pd.DataFrame:
+    responses = session.query(LLMResponse).all()
+    return pd.DataFrame(
+        [
+            {
+                "response_id": r.response_id,
+                "prompt_id": r.prompt_id,
+                "system_prompt_id": r.system_prompt_id,
+                "model": r.model,
+                "llm_label": r.llm_label,
+                "response": r.response,
+            }
+            for r in responses
+        ]
+    )
+
+
+@contained_db_function
+def get_all_system_prompts(session: Session) -> pd.DataFrame:
+    system_prompts = session.query(SystemPrompt).all()
+    return pd.DataFrame(
+        [
+            {
+                "system_prompt_id": sp.system_prompt_id,
+                "system_prompt_name": sp.system_prompt_name,
+                "system_prompt": sp.system_prompt,
+            }
+            for sp in system_prompts
+        ]
+    )
