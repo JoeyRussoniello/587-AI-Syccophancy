@@ -19,6 +19,7 @@ dependencies = [
     "tqdm>=4.67.3",
     "bert-score>=0.3.13",
     "sentence-transformers>=3.0.0",
+    "ipykernel>=7.2.0",
 ]
 
 [dependency-groups]
