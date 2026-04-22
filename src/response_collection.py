@@ -8,6 +8,7 @@ from tqdm import tqdm
 from db.crud import (
     ensure_system_prompt,
     get_pending_prompts,
+    migrate_add_top_comment,
     save_responses_bulk,
     seed_prompts,
 )
@@ -101,6 +102,7 @@ async def get_responses_for_models(
     """Run response collection for multiple models concurrently."""
 
     with get_session() as session:
+        migrate_add_top_comment(session, config.datasets_dir)
         seed_prompts(session, config.datasets_dir)
         ensure_system_prompt(session, config.system_prompt)
 
